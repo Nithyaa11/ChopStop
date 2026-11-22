@@ -1,0 +1,203 @@
+# Chopstop
+
+Operations and intelligence system for **Chopstop** — a cloud kitchen with one physical outlet.
+
+Chopstop takes orders from four channels: **Swiggy, Zomato, subscriptions and walk-ins**. This system brings them into one place, runs the kitchen and delivery workflow, tracks inventory, and builds up clean operational data. Over time, an AI layer will use that data to recommend improvements.
+
+> **Guiding principle:** make Chopstop easier to operate — not another system that creates more work for the people running it.
+
+---
+
+## Status
+
+🚧 **Early development.** Building Layer 1 (core operations) first.
+
+---
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Frontend | React + TypeScript (Vite), installable PWA |
+| Backend | FastAPI (Python 3.12) |
+| Database | PostgreSQL (single source of truth) |
+| Migrations | Alembic |
+| ORM | SQLAlchemy 2.x |
+| Architecture | Modular monolith |
+| Local dev | Docker Compose |
+
+---
+
+## Modules
+
+### Layer 1 — Core operations (MVP)
+| # | Module | Responsibility |
+|---|---|---|
+| 1 | Auth & Users | Login, roles, permissions |
+| 2 | Orders | Swiggy, Zomato, subscriptions, walk-ins |
+| 3 | Kitchen | Queue, preparation, timers, delays |
+| 4 | Subscriptions | Plans, customer preferences, daily orders |
+| 5 | Inventory & Procurement | Ingredients, recipes, grocery lists |
+| 6 | Packing & Delivery | Labels, assignments, routes, delivery status |
+
+### Layer 2 — Business management (later)
+| # | Module | Responsibility |
+|---|---|---|
+| 7 | Customers | Profiles, history, preferences |
+| 8 | Finance | Revenue, expenses, settlements, cash flow, profit |
+
+### Layer 3 — Intelligence & analytics (growth)
+| # | Module | Responsibility |
+|---|---|---|
+| 9 | Business Analytics | Sales, menu, retention, operational KPIs |
+| 10 | Forecasting | Demand, prep time, churn, inventory |
+
+### Layer 4 — AI & infrastructure (advanced)
+| # | Module | Responsibility |
+|---|---|---|
+| 11 | Agent Harness | Context, memory, tools, planning, policies |
+| 12 | Feedback & Evaluation | Recommendation outcomes, continuous improvement |
+
+---
+
+## Project structure
+
+```
+chopstop/
+├── backend/
+│   ├── app/
+│   │   ├── core/           # config, db session, auth, logging
+│   │   ├── modules/        # one folder per business module
+│   │   │   ├── auth/
+│   │   │   ├── orders/
+│   │   │   ├── kitchen/
+│   │   │   ├── subscriptions/
+│   │   │   ├── inventory/
+│   │   │   └── delivery/
+│   │   └── main.py
+│   ├── migrations/         # Alembic
+│   ├── tests/
+│   └── pyproject.toml
+├── harness/                # AI agent harness (separate from the app)
+│   ├── context/
+│   ├── memory/
+│   ├── tools/
+│   ├── policies/
+│   └── evals/
+├── frontend/               # React PWA
+├── docker-compose.yml
+├── .env.example
+└── README.md
+```
+
+Each module contains `models.py`, `schemas.py`, `service.py` and `router.py`.
+
+---
+
+## Getting started
+
+### Prerequisites
+- Python 3.12+
+- Node.js 20+
+- Docker and Docker Compose
+- [uv](https://github.com/astral-sh/uv) (Python package manager)
+
+### 1. Clone and configure
+```bash
+git clone <repo-url> chopstop
+cd chopstop
+cp .env.example .env      # then fill in the values
+```
+
+### 2. Start the database
+```bash
+docker compose up -d db
+```
+
+### 3. Run the backend
+```bash
+cd backend
+uv sync
+uv run alembic upgrade head
+uv run uvicorn app.main:app --reload
+```
+API: http://localhost:8000 · Docs: http://localhost:8000/docs
+
+### 4. Run the frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+App: http://localhost:5173
+
+---
+
+## Environment variables
+
+See `.env.example` for the full list. Never commit `.env`.
+
+| Variable | Purpose |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Signing key for auth tokens |
+| `JWT_EXPIRE_MINUTES` | Token lifetime |
+| `CORS_ORIGINS` | Allowed frontend origins |
+| `LLM_API_KEY` | AI harness only — optional, app runs without it |
+
+---
+
+## Development
+
+```bash
+# Backend
+uv run pytest                 # tests
+uv run ruff check .           # lint
+uv run ruff format .          # format
+uv run alembic revision --autogenerate -m "message"   # new migration
+
+# Frontend
+npm run lint
+npm run build
+```
+
+Pre-commit hooks:
+```bash
+pre-commit install
+```
+
+---
+
+## Design rules
+
+These hold across the codebase:
+
+1. **Modules talk through services, not tables.** One module never queries another module's tables directly.
+2. **No duplicate orders.** Orders have a unique `(source, external_order_id)` constraint, so the same Swiggy or Zomato order can't be entered twice.
+3. **Delay is a flag, not a status.** An order can be `preparing` *and* delayed.
+4. **Don't assume ingredient usage.** An order coming in doesn't mean ingredients were used; stock changes are recorded explicitly.
+5. **The app works without AI.** The harness reads from the app; the app never depends on the harness.
+6. **Humans approve consequential actions.** Anything the AI suggests that spends money, changes the menu or contacts customers needs approval.
+7. **Manual entry first** for Swiggy and Zomato until integrations are in place.
+
+---
+
+## Roadmap
+
+- [ ] **Phase 0** — Repo setup, CI, database, health check
+- [ ] **Phase 1** — Auth, roles, user accounts
+- [ ] **Phase 2** — Orders (all four channels) + kitchen queue
+- [ ] **Phase 3** — Subscriptions
+- [ ] **Phase 4** — Inventory, recipes, grocery lists
+- [ ] **Phase 5** — Packing and delivery
+- [ ] **Phase 6** — Customers and finance
+- [ ] **Phase 7** — Analytics and forecasting
+- [ ] **Phase 8** — Agent harness and feedback loop
+
+---
+
+## Contributing
+
+1. Branch from `main`: `feat/<module>-<short-desc>` or `fix/<short-desc>`
+2. Keep PRs small and scoped to one module where possible
+3. CI (lint, tests, frontend build) must pass before merge
