@@ -18,13 +18,22 @@ Chopstop takes orders from four channels: **Swiggy, Zomato, subscriptions and wa
 
 | Layer | Choice |
 |---|---|
-| Frontend | React + TypeScript (Vite), installable PWA |
-| Backend | FastAPI (Python 3.12) |
-| Database | PostgreSQL (single source of truth) |
+| Frontend | React + TypeScript (Vite), Tailwind CSS, installable PWA |
+| Backend | FastAPI (Python 3.12), Pydantic v2 |
+| Database | PostgreSQL 16 (single source of truth) |
 | Migrations | Alembic |
 | ORM | SQLAlchemy 2.x |
+| Live updates | WebSockets (FastAPI) |
+| Auth | Argon2 password hashing + short-lived JWT, role-based access |
+| Analytics | SQL views + Python (pandas), read-only DB role |
+| Forecasting | statsmodels / scikit-learn (switched on once there is enough history) |
+| AI harness | LLM API via a separate `harness/` package, read-only, optional |
+| Order intake | Manual entry first; pluggable adapter for a POS-partner webhook later |
+| Quality | ruff, pytest, pre-commit, gitleaks (secret scanning), GitHub Actions CI |
 | Architecture | Modular monolith |
 | Local dev | Docker Compose |
+
+Daily progress is logged in [`progress/`](progress/).
 
 ---
 
@@ -73,7 +82,10 @@ chopstop/
 │   │   │   ├── kitchen/
 │   │   │   ├── subscriptions/
 │   │   │   ├── inventory/
-│   │   │   └── delivery/
+│   │   │   ├── delivery/
+│   │   │   ├── analytics/      # scaffolded early: SQL views + KPI functions, read-only
+│   │   │   └── forecasting/    # scaffolded early: returns "not enough data" until history exists
+│   │   ├── integrations/   # order intake adapters: manual (now), POS-partner webhook (later)
 │   │   └── main.py
 │   ├── migrations/         # Alembic
 │   ├── tests/

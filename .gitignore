@@ -1,0 +1,45 @@
+# ---- Secrets: never commit ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ---- Database dumps / backups (contain customer data) ----
+*.sql.gz
+*.dump
+*.backup
+backups/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+dist/
+build/
+
+# ---- Node / frontend ----
+node_modules/
+frontend/dist/
+frontend/dev-dist/
+npm-debug.log*
+
+# ---- Editors / OS ----
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+~$*
+
+# ---- Claude Code local settings ----
+.claude/settings.local.json
