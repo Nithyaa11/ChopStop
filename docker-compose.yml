@@ -8,6 +8,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-chopstop}
       # No default: compose refuses to start if the password isn't set in .env
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      # Require a password for every connection, even from inside the container
+      # (the image's default trusts local/loopback connections). Applied at first init only.
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
       # Bound to localhost only: the database is not reachable from the network
       - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
