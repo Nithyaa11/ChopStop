@@ -10,7 +10,7 @@
 |---|---|---|---|
 | 0 | Mon 24 Nov | Read the design doc, pick the stage 1 scope, agree on guardrails and stack | ✅ Done |
 | 1 | Tue 25 Nov | Repo skeleton, `.gitignore`, `.env.example`, Postgres in Docker Compose | ✅ Done (started early, 24 Nov). DB tested and healthy |
-| 2 | Wed 26 Nov | FastAPI app, config, DB session, `/health` endpoint | ⬜ |
+| 2 | Wed 26 Nov | FastAPI app, config, DB session, `/health` endpoint | ✅ Done (started early, 24 Nov). 16 tests passing |
 | 3 | Thu 27 Nov | Alembic set up, first migration | ⬜ |
 | 4 | Fri 28 Nov | CI (ruff + pytest), pre-commit with gitleaks secret scan | ⬜ |
 | 5 | Sat 29 Nov | Users table, Argon2 hashing, roles (founder, cook, rider, admin) | ⬜ |
@@ -70,3 +70,40 @@
 - VS Code was opened before Docker was installed, so its terminals don't see `docker` yet. Restart VS Code to fix.
 
 **Next:** Day 2 — FastAPI app with `/health` that also checks the DB.
+
+### Day 2 — Mon 24 Nov (started early)
+**Done**
+- Branch `feat/backend-health`.
+- `backend/pyproject.toml`:
+  - Python 3.12.
+  - FastAPI, SQLAlchemy 2, psycopg 3, pydantic-settings.
+  - Dev tools: pytest, httpx, ruff, with ruff's security rules (`S`) switched on.
+- `app/core/config.py`: settings read from `.env`.
+- `app/core/db.py`: DB engine with a 3s connect timeout and dead-connection checks; one session per request.
+- `app/main.py`: `/health` endpoint.
+- Tests:
+  - `tests/test_config.py`: 13 checks on unsafe settings.
+  - `tests/test_health.py`: health OK, health when the DB is down, and an unknown origin being blocked.
+
+**Guardrails added**
+- The app refuses to start with:
+  - a weak or placeholder `JWT_SECRET` (needs 32+ random characters)
+  - the placeholder DB password
+  - a wildcard `*` in CORS
+  - a token lifetime outside 5 min–24 h
+- Secrets are hidden in logs and printouts (`SecretStr`).
+- When the DB is down, `/health` returns 503 with a generic message. It never shows the error or connection string; the full error is logged server-side only.
+- API docs (`/docs`) are switched off in production.
+- CORS only allows the listed origins and the methods and headers we use.
+
+**Verified**
+- User installed uv 0.13.9 manually (Claude's auto mode blocked the install script).
+- `uv sync`: Python 3.12.16 set up, packages locked in `uv.lock`.
+- `ruff check`: all checks passed, including the security rules. `ruff format --check`: clean.
+- `pytest`: ✅ **16 passed** (13 settings guardrails + 3 health/CORS).
+- Live run: started the server, `GET /health` returned `200 {"status":"ok","database":"ok"}` against the real Docker DB.
+
+**Open items**
+- ⚠️ One harmless test warning: the Starlette test client suggests `httpx2` instead of `httpx`. Not switched yet, because a new package should be checked first (supply-chain safety). Revisit when we set up CI on Day 4.
+
+**Next:** Day 3 — Alembic and the first migration.
