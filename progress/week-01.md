@@ -11,11 +11,11 @@
 | 0 | Mon 24 Nov | Read the design doc, pick the stage 1 scope, agree on guardrails and stack | ✅ Done |
 | 1 | Tue 25 Nov | Repo skeleton, `.gitignore`, `.env.example`, Postgres in Docker Compose | ✅ Done (started early, 24 Nov). DB tested and healthy |
 | 2 | Wed 26 Nov | FastAPI app, config, DB session, `/health` endpoint | ✅ Done (started early, 24 Nov). 16 tests passing |
-| 3 | Thu 27 Nov | Alembic set up, first migration | ⬜ |
+| 3 | Thu 27 Nov | Alembic set up, first migration | ✅ Done 25 Nov. Audit log pulled forward from Day 7. 25 tests passing |
 | 4 | Fri 28 Nov | CI (ruff + pytest), pre-commit with gitleaks secret scan | ⬜ |
 | 5 | Sat 29 Nov | Users table, Argon2 hashing, roles (founder, cook, rider, admin) | ⬜ |
 | 6 | Sun 30 Nov | JWT login, deny-by-default role checks on every endpoint | ⬜ |
-| 7 | Mon 1 Dec | Append-only audit log, tests proving each role is blocked where it should be | ⬜ |
+| 7 | Mon 1 Dec | Tests proving each role is blocked where it should be; app writes to the audit log (table done Day 3) | ⬜ |
 
 **Alongside the coding (stage 0, no code):** watch 7 days of real orders. For each day, note the number of Swiggy, Zomato, walk-in and subscription orders, the rush hours, and what caused stress. This decides whether paid Swiggy/Zomato integration is worth it.
 
@@ -107,3 +107,34 @@
 - ⚠️ One harmless test warning: the Starlette test client suggests `httpx2` instead of `httpx`. Not switched yet, because a new package should be checked first (supply-chain safety). Revisit when we set up CI on Day 4.
 
 **Next:** Day 3 — Alembic and the first migration.
+
+### Day 3 — Tue 25 Nov
+**Done**
+- Branch `feat/alembic-audit-log`. Added Alembic 1.20.
+- `alembic.ini` contains **no DB URL**. `migrations/env.py` reads it from `.env` via the app settings, so no password is ever committed.
+- `app/core/models.py`: shared `Base` with predictable constraint names, plus `TimestampMixin` (`created_at` / `updated_at`, timezone-aware, set by the DB).
+- `app/db_models.py`: one place that imports every module's tables, so Alembic sees them all.
+- First migration `0001`: the **`audit_log` table**. It records who, role, action, entity, before/after (JSONB), reason and request ID. Pulled forward from Day 7 because every later module writes to it.
+- Applied to the dev DB: `alembic current` → `0001 (head)`.
+- Moved the design doc into `docs/system-overview.md`.
+
+**Guardrails added**
+- 🔒 **Audit log is append-only, enforced by Postgres.** A trigger rejects UPDATE, DELETE and TRUNCATE, so no app bug, admin or AI can rewrite history.
+- IDs can't be forced (`IDENTITY ALWAYS`), so fake rows with a chosen ID are impossible. Empty `action` or `entity_type` is rejected.
+- 🔒 **Tests never touch real data.** They run on a separate `chopstop_test` DB, and the run aborts if the DB name doesn't end in `_test`.
+- A test fails if a model and the migrations drift apart. Another fails if migration history splits into two branches.
+- Every DB connection now has a timeout (app 3s, Alembic 5s, tests 3s), so nothing can hang forever.
+
+**Problems hit & fixed**
+- Docker Desktop wasn't running, and the test run hung for 37 min. Now tests that need the DB stop in seconds with "Is Docker Desktop running?". Pure tests (settings) no longer need Docker.
+- Root cause of the hang: on Windows, `localhost` resolves to IPv6 `::1` first, but the DB only listens on `127.0.0.1`. Alembic's connection had no timeout, so it waited forever. Fixed by switching `DATABASE_URL` to `127.0.0.1` (`.env.example` and local `.env`) and adding timeouts everywhere.
+- Fixed an Alembic deprecation warning (`path_separator`).
+
+**Results:** `pytest` ✅ **25 passed** in ~2s · `ruff check` ✅ · `ruff format` ✅
+
+**Open items**
+- `httpx2` warning still parked for Day 4 (CI).
+- Later (before go-live): the app should connect as a **separate, non-owner DB user** that can only INSERT/SELECT on `audit_log`. The table owner can still disable triggers, so this closes that gap.
+- **Remember:** start Docker Desktop before working (`docker compose up -d db`).
+
+**Next:** Day 4 — CI (GitHub Actions: ruff + pytest with a Postgres service) and gitleaks secret scanning in pre-commit.

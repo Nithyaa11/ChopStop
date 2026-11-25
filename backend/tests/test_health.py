@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from app.main import app, get_db_checker
 
 
-def test_health_ok_with_real_database() -> None:
+def test_health_ok_with_real_database(migrated_test_db: str) -> None:
     """Integration: needs `docker compose up -d db` running."""
     client = TestClient(app)
     response = client.get("/health")
