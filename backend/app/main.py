@@ -1,14 +1,17 @@
 """Chopstop API entry point."""
 
 import logging
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError
 
 from app.core.config import get_settings
-from app.core.db import ping_database
+from app.core.db import get_engine, ping_database
+from app.core.db_roles import assert_least_privilege
 
 logger = logging.getLogger("chopstop")
 
@@ -18,12 +21,33 @@ def get_db_checker() -> Callable[[], bool]:
     return ping_database
 
 
+def check_database_privileges() -> None:
+    """Refuse to start if connected as a powerful DB user.
+
+    If the DB is simply unreachable we still start, so /health can report it.
+    """
+    try:
+        conn = get_engine().connect()
+    except OperationalError:
+        logger.warning("Startup: database unreachable, skipping privilege check")
+        return
+    with conn:
+        assert_least_privilege(conn)
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    check_database_privileges()
+    yield
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
         title="Chopstop API",
         version="0.1.0",
+        lifespan=lifespan,
         # Don't publish the API map in production
         docs_url=None if settings.is_production else "/docs",
         redoc_url=None,

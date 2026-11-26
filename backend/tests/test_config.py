@@ -49,3 +49,14 @@ def test_secrets_hidden_in_repr() -> None:
     settings = make()
     assert "a-real-password" not in repr(settings)
     assert "x" * 48 not in repr(settings)
+
+
+def test_app_and_migrator_must_differ() -> None:
+    same = "postgresql+psycopg://chopstop:a-real-password@localhost:5432/db"
+    with pytest.raises(ValidationError, match="different database users"):
+        make(database_url=same, migrator_database_url=same)
+
+
+def test_placeholder_migrator_password_rejected() -> None:
+    with pytest.raises(ValidationError):
+        make(migrator_database_url="postgresql+psycopg://chopstop:change-me@localhost:5432/db")

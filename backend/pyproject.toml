@@ -37,3 +37,7 @@ select = ["E", "F", "I", "B", "S", "UP"]
 [tool.ruff.lint.per-file-ignores]
 # assert is fine in tests
 "tests/**" = ["S101"]
+# Migrations interpolate ONLY module-level constants that are validated against a strict
+# identifier regex before use (e.g. ROLE in 0002). Never interpolate settings or input.
+# S608 stays enforced everywhere in app/.
+"migrations/versions/**" = ["S608"]

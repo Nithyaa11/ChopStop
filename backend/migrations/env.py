@@ -16,7 +16,11 @@ target_metadata = Base.metadata
 
 
 def _url() -> str:
-    return get_settings().database_url.get_secret_value()
+    """Migrations run as the table owner, never as the limited app user."""
+    url = get_settings().migrator_database_url
+    if url is None:
+        raise RuntimeError("MIGRATOR_DATABASE_URL is not set; migrations need the owner user")
+    return url.get_secret_value()
 
 
 def run_migrations_offline() -> None:

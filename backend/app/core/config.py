@@ -8,8 +8,9 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
 # backend/app/core/config.py -> repo root is three levels above "core"
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -26,7 +27,10 @@ class Settings(BaseSettings):
     )
 
     app_env: Literal["development", "test", "production"] = "development"
+    # Limited app user (chopstop_app). Used by the running backend.
     database_url: SecretStr
+    # Table owner. Used ONLY by Alembic migrations and the role setup script.
+    migrator_database_url: SecretStr | None = None
     jwt_secret: SecretStr
     jwt_expire_minutes: int = 60
     cors_origins: str = "http://localhost:5173"
@@ -41,12 +45,24 @@ class Settings(BaseSettings):
             )
         return value
 
-    @field_validator("database_url")
+    @field_validator("database_url", "migrator_database_url")
     @classmethod
-    def database_url_must_not_use_placeholder(cls, value: SecretStr) -> SecretStr:
-        if ":change-me@" in value.get_secret_value():
-            raise ValueError("DATABASE_URL still contains the placeholder password")
+    def database_url_must_not_use_placeholder(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and ":change-me@" in value.get_secret_value():
+            raise ValueError("Database URL still contains the placeholder password")
         return value
+
+    @model_validator(mode="after")
+    def app_and_migrator_must_be_different_users(self) -> "Settings":
+        if self.migrator_database_url is None:
+            return self
+        app_user = make_url(self.database_url.get_secret_value()).username
+        owner = make_url(self.migrator_database_url.get_secret_value()).username
+        if app_user == owner:
+            raise ValueError(
+                "DATABASE_URL and MIGRATOR_DATABASE_URL must use different database users"
+            )
+        return self
 
     @field_validator("jwt_expire_minutes")
     @classmethod
