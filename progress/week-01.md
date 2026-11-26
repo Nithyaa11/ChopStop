@@ -12,7 +12,7 @@
 | 1 | Tue 25 Nov | Repo skeleton, `.gitignore`, `.env.example`, Postgres in Docker Compose | ✅ Done (started early, 24 Nov). DB tested and healthy |
 | 2 | Wed 26 Nov | FastAPI app, config, DB session, `/health` endpoint | ✅ Done (started early, 24 Nov). 16 tests passing |
 | 3 | Thu 27 Nov | Alembic set up, first migration | ✅ Done 25 Nov. Audit log pulled forward from Day 7. 25 tests passing |
-| 4 | Fri 28 Nov | CI (ruff + pytest), pre-commit with gitleaks secret scan | ⬜ |
+| 4 | Fri 28 Nov | CI (ruff + pytest), pre-commit with gitleaks secret scan | ✅ Done 26 Nov, together with the least-privilege DB user. 42 tests |
 | 5 | Sat 29 Nov | Users table, Argon2 hashing, roles (founder, cook, rider, admin) | ⬜ |
 | 6 | Sun 30 Nov | JWT login, deny-by-default role checks on every endpoint | ⬜ |
 | 7 | Mon 1 Dec | Tests proving each role is blocked where it should be; app writes to the audit log (table done Day 3) | ⬜ |
@@ -138,3 +138,66 @@
 - **Remember:** start Docker Desktop before working (`docker compose up -d db`).
 
 **Next:** Day 4 — CI (GitHub Actions: ruff + pytest with a Postgres service) and gitleaks secret scanning in pre-commit.
+
+### Day 4 — Wed 26 Nov (least-privilege DB user + CI & secret scanning)
+**Setup**
+- Docker Desktop now starts at Windows sign-in (`AutoStart` on, original settings backed up). The DB container has `restart: unless-stopped`, so the DB comes back by itself.
+
+**Part A — least-privilege database user** (closes the gap from Day 3)
+- New DB user **`chopstop_app`** for the running app: not superuser, owns nothing, can't create tables, users or databases.
+- Settings split:
+  - `DATABASE_URL` = app user.
+  - `MIGRATOR_DATABASE_URL` = table owner, used **only** by Alembic and the setup script.
+  - The app refuses to load if both point to the same user.
+- `scripts/setup_db_roles.py`: idempotent. Creates or updates the user with its own random password from `.env`, and resets it to the weakest attributes every time.
+- Migration `0002`:
+  - The app user can only **SELECT + INSERT** on `audit_log`.
+  - Future tables get normal read/write by default.
+  - Nobody but the owner can create objects in the schema.
+- 🔒 **The app refuses to start** if its DB user is a superuser, owns tables or the DB, or can create roles or DBs.
+- 🔒 The audit log is now tamper-proof at **two layers**:
+  - the app user is blocked by privileges ("permission denied")
+  - even the owner is blocked by the trigger ("append-only")
+- Tests show the app user **cannot**:
+  - disable the audit trigger
+  - drop or create tables
+  - create users
+  - promote itself to superuser
+  - edit `alembic_version`
+
+**Part B — Day 4: CI + secret scanning**
+- **pre-commit** hooks on every `git commit`:
+  - gitleaks secret scan
+  - private-key detection
+  - large-file block (>500 KB)
+  - merge-conflict markers
+  - YAML/TOML checks
+  - end-of-file and whitespace fixes
+  - **no direct commits to `main`**
+  - ruff lint + format
+- 🔒 **Found & fixed a gap:** gitleaks' default rules **missed database URLs with passwords** (tested with fake ones). Added a custom rule in `.gitleaks.toml`. Only the placeholders `change-me`, `${ENV_VAR}` and two fixed fake test values are allowed.
+- Verified:
+  - fake GitHub token blocked ✅
+  - fake DB URLs blocked ✅
+  - full git history clean ✅
+  - the rule recognizes the real `.env` (which stays ignored) ✅
+- **GitHub Actions CI** (`.github/workflows/ci.yml`) on every push:
+  - Gitleaks over the **full history**.
+  - Install must match `uv.lock` exactly (`uv sync --locked`).
+  - ruff lint + format.
+  - Fresh Postgres: create the app user, `alembic upgrade head`, `alembic check` (models match migrations).
+  - pytest.
+- CI guardrails: workflow token is read-only; per-run random passwords and JWT secret, masked in logs.
+- README: CI badge, setup step for the DB user, new env var, pre-commit instructions.
+
+**Problems hit & fixed**
+- I put a ruff `noqa` comment *inside* a SQL string by mistake, which would have broken the migration. Caught before running it. Fixed with a documented per-folder exception (`migrations/versions/**` may interpolate only validated constants), and the migration now checks the role name against a strict regex.
+
+**Results:** `pytest` ✅ **42 passed** in ~1.6s · `ruff` ✅ · `pre-commit --all-files` ✅
+
+**Open items**
+- `httpx2` deprecation warning still parked (package not yet vetted).
+- Before go-live: the owner user on the server should not be a superuser either (go-live checklist).
+- Tip: in VS Code, pick `backend/.venv` as the Python interpreter (Ctrl+Shift+P → "Python: Select Interpreter") so imports stop showing as "not installed".
+
+**Next:** Day 5 — `users` table, Argon2 password hashing, roles (founder, cook, rider, admin).

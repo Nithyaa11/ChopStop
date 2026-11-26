@@ -1,0 +1,39 @@
+# Runs on every `git commit`. Install once:  cd backend && uv run pre-commit install
+# Run on everything manually:              cd backend && uv run pre-commit run --all-files
+repos:
+  # 🔒 Block passwords, API keys, tokens and private keys from ever being committed
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      # Work happens on feat/... branches; main only moves by fast-forward merge
+      - id: no-commit-to-branch
+        args: ["--branch", "main"]
+
+  # Lint + format the backend with the exact ruff version pinned in uv.lock
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check (backend)
+        entry: uv run --project backend ruff check --force-exclude
+        language: system
+        types: [python]
+        files: ^backend/
+      - id: ruff-format
+        name: ruff format --check (backend)
+        entry: uv run --project backend ruff format --check --force-exclude
+        language: system
+        types: [python]
+        files: ^backend/

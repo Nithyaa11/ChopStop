@@ -1,0 +1,22 @@
+# gitleaks config: all default rules + rules for secrets this project actually has.
+# Used by the pre-commit hook and by CI.
+
+[extend]
+useDefault = true
+
+# Default rules do NOT catch passwords inside database URLs, our most likely leak.
+[[rules]]
+id = "database-url-with-password"
+description = "Database connection URL with an embedded password"
+regex = '''(?i)\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis)(?:\+[a-z0-9]+)?://[^:@\s/'"]+:([^@\s/'"]{6,})@'''
+secretGroup = 1
+keywords = ["postgres", "mysql", "mariadb", "mongodb", "redis"]
+
+  [rules.allowlist]
+  regexTarget = "secret"
+  regexes = [
+    '''^change-me$''',            # placeholder in .env.example
+    '''^a-real-password$''',      # fixed fake value used in tests/test_config.py
+    '''^SuperSecret$''',          # fake value in tests/test_health.py (checks /health never leaks it)
+    '''^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$''',  # ${ENV_VAR} references (CI workflow)
+  ]

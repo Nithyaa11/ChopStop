@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege for the workflow token: read the code, nothing else
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    name: Secret scan (gitleaks, full history)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # scan every commit, not just the latest
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  backend:
+    name: Backend (lint, migrate, test)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: chopstop
+          POSTGRES_USER: chopstop
+          # Throwaway DB that only exists for this CI run, not a real secret
+          POSTGRES_PASSWORD: ci-only-throwaway-owner-pw
+          POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U chopstop -d chopstop"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      APP_ENV: test
+      CORS_ORIGINS: http://localhost:5173
+      OWNER_PW: ci-only-throwaway-owner-pw
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate per-run secrets (masked in logs)
+        run: |
+          APP_DB_PW=$(openssl rand -hex 24)
+          JWT=$(openssl rand -hex 32)
+          echo "::add-mask::$APP_DB_PW"
+          echo "::add-mask::$JWT"
+          echo "JWT_SECRET=$JWT" >> "$GITHUB_ENV"
+          echo "DATABASE_URL=postgresql+psycopg://chopstop_app:${APP_DB_PW}@127.0.0.1:5432/chopstop" >> "$GITHUB_ENV"
+          echo "MIGRATOR_DATABASE_URL=postgresql+psycopg://chopstop:${OWNER_PW}@127.0.0.1:5432/chopstop" >> "$GITHUB_ENV"
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install (must match uv.lock exactly)
+        run: uv sync --locked
+
+      - name: Lint
+        run: uv run ruff check --output-format=github .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Migrate a fresh database (as owner) and create the limited app user
+        run: |
+          uv run python -m scripts.setup_db_roles
+          uv run alembic upgrade head
+          uv run alembic check
+
+      - name: Tests
+        run: uv run pytest -q

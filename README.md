@@ -1,5 +1,7 @@
 # Chopstop
 
+[![CI](https://github.com/Nithyaa11/ChopStop/actions/workflows/ci.yml/badge.svg)](https://github.com/Nithyaa11/ChopStop/actions/workflows/ci.yml)
+
 Operations and intelligence system for **Chopstop** — a cloud kitchen with one physical outlet.
 
 Chopstop takes orders from four channels: **Swiggy, Zomato, subscriptions and walk-ins**. This system brings them into one place, runs the kitchen and delivery workflow, tracks inventory, and builds up clean operational data. Over time, an AI layer will use that data to recommend improvements.
@@ -130,6 +132,7 @@ docker compose up -d db
 ```bash
 cd backend
 uv sync
+uv run python -m scripts.setup_db_roles   # once: creates the limited chopstop_app DB user
 uv run alembic upgrade head
 uv run uvicorn app.main:app --reload
 ```
@@ -151,7 +154,8 @@ See `.env.example` for the full list. Never commit `.env`.
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
+| `DATABASE_URL` | App's connection, as the limited `chopstop_app` user |
+| `MIGRATOR_DATABASE_URL` | Table owner's connection, used **only** by Alembic and the setup script |
 | `JWT_SECRET` | Signing key for auth tokens |
 | `JWT_EXPIRE_MINUTES` | Token lifetime |
 | `CORS_ORIGINS` | Allowed frontend origins |
@@ -173,10 +177,15 @@ npm run lint
 npm run build
 ```
 
-Pre-commit hooks:
+Pre-commit hooks (gitleaks secret scan, ruff, safety checks). Install once:
 ```bash
-pre-commit install
+cd backend
+uv run pre-commit install
+uv run pre-commit run --all-files   # optional: check everything now
 ```
+
+CI (GitHub Actions) runs on every push: gitleaks over the full history, ruff,
+migrations on a fresh Postgres, and the test suite.
 
 ---
 
