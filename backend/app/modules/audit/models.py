@@ -8,7 +8,7 @@ admins, or the AI harness.
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import BigInteger, CheckConstraint, DateTime, Identity, Text, func
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, ForeignKey, Identity, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -26,8 +26,10 @@ class AuditLog(Base):
     occurred_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )
-    # Who did it. Nullable for system actions; becomes a FK to users once that table exists.
-    actor_user_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True, index=True)
+    # Who did it. NULL only for system actions (CLI bootstrap). Must be a real user.
+    actor_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     actor_role: Mapped[str | None] = mapped_column(Text, nullable=True)
     # What happened, e.g. "order.created", "order.status_changed", "stock.adjusted"
     action: Mapped[str] = mapped_column(Text, nullable=False)

@@ -10,6 +10,7 @@ dependencies = [
     "sqlalchemy>=2.0.36",
     "psycopg[binary]>=3.2",
     "alembic>=1.14",
+    "argon2-cffi>=23.1",
 ]
 
 [dependency-groups]
@@ -36,8 +37,9 @@ target-version = "py312"
 select = ["E", "F", "I", "B", "S", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
-# assert is fine in tests
-"tests/**" = ["S101"]
+# assert is fine in tests; tests use deliberately fake/weak passwords (S105/S106).
+# Real secrets in tests are still caught by gitleaks.
+"tests/**" = ["S101", "S105", "S106"]
 # Migrations interpolate ONLY module-level constants that are validated against a strict
 # identifier regex before use (e.g. ROLE in 0002). Never interpolate settings or input.
 # S608 stays enforced everywhere in app/.

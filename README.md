@@ -134,6 +134,7 @@ cd backend
 uv sync
 uv run python -m scripts.setup_db_roles   # once: creates the limited chopstop_app DB user
 uv run alembic upgrade head
+uv run python -m scripts.create_user     # once: create the first admin (hidden password prompt)
 uv run uvicorn app.main:app --reload
 ```
 API: http://localhost:8000 · Docs: http://localhost:8000/docs

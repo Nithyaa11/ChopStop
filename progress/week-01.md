@@ -13,7 +13,7 @@
 | 2 | Wed 26 Nov | FastAPI app, config, DB session, `/health` endpoint | ✅ Done (started early, 24 Nov). 16 tests passing |
 | 3 | Thu 27 Nov | Alembic set up, first migration | ✅ Done 25 Nov. Audit log pulled forward from Day 7. 25 tests passing |
 | 4 | Fri 28 Nov | CI (ruff + pytest), pre-commit with gitleaks secret scan | ✅ Done 26 Nov, together with the least-privilege DB user. 42 tests |
-| 5 | Sat 29 Nov | Users table, Argon2 hashing, roles (founder, cook, rider, admin) | ⬜ |
+| 5 | Sat 29 Nov | Users table, Argon2 hashing, roles (founder, cook, rider, admin) | ✅ Done 27 Nov. 84 tests |
 | 6 | Sun 30 Nov | JWT login, deny-by-default role checks on every endpoint | ⬜ |
 | 7 | Mon 1 Dec | Tests proving each role is blocked where it should be; app writes to the audit log (table done Day 3) | ⬜ |
 
@@ -201,3 +201,47 @@
 - Tip: in VS Code, pick `backend/.venv` as the Python interpreter (Ctrl+Shift+P → "Python: Select Interpreter") so imports stop showing as "not installed".
 
 **Next:** Day 5 — `users` table, Argon2 password hashing, roles (founder, cook, rider, admin).
+
+### Day 5 — Thu 27 Nov (users, roles, password hashing)
+**Done**
+- Branch `feat/users-roles`. Added `argon2-cffi`.
+- `app/core/security.py`:
+  - **Argon2id** hashing (RFC 9106 profile: t=3, 64 MiB, p=4).
+  - Password rules: 10–128 chars, not a common password, at least 4 different characters, must not contain the username.
+- `users` table (migration `0003`):
+  - Fields: username, display name, role, password hash, active flag.
+  - Login protection fields for Day 6: failed-login count, `locked_until`, `token_version`, `last_login_at`.
+- 4 roles: **admin** (accounts), **founder** (business, money, reports), **cook** (kitchen only, no money), **rider** (own deliveries only).
+- `users/service.py`: create user, set password, change role, deactivate. Every change writes an audit entry in the same transaction.
+- `audit/service.py`: `record()` used by all modules.
+- `scripts/create_user.py`: creates the first admin. The password is typed at a hidden prompt, never as an argument (keeps it out of shell history).
+- DB container auto-recovered when Docker started (restart policy works). Auto-start at sign-in applies after the next Windows sign-in; the PC hasn't restarted since 17 Nov.
+
+**Guardrails added**
+- 🔒 **Database-enforced:**
+  - role must be one of the 4
+  - username lowercase `a-z 0-9 . _ -`, 3–32 chars, unique
+  - `password_hash` must be an Argon2id hash, so plaintext **can't** be stored even by a buggy insert
+- 🔒 **Users can never be deleted:** the app DB user has no DELETE/TRUNCATE on `users`. Deactivate instead, so audit history always points at a real person.
+- 🔒 `audit_log.actor_user_id` must reference a real user (foreign key).
+- 🔒 **Only admins manage accounts**, checked in the service (defence in depth; Day 6 adds the API check).
+  - Users may change their *own* password.
+  - Founder/cook/rider can't create users or reset others' passwords.
+- 🔒 **The last active admin can't be deactivated or demoted** (no lock-out).
+- Role change, deactivation and password change **bump `token_version`**, so old logins stop working (used by Day 6 tokens).
+- Reason is required for role changes and deactivation, and stored in the audit log.
+- 🔒 **Audit redaction:** password, hash, token, secret, api_key, OTP and PIN fields are replaced with `[REDACTED]` at any depth. Whole-word matching, so `shipping_address` isn't wrongly hidden.
+- Login timing safety ready for Day 6: `verify_password(None, pw)` takes the same time when the user doesn't exist, so usernames can't be probed.
+- The hash never appears in API responses (`UserOut`) or `repr()`.
+
+**Problems hit & fixed**
+- Docker Desktop had been closed; restarted it and the DB came back by itself.
+- Alembic's draft wrote `LIKE '$argon2id$%%'`. The doubled `%` could have been stored literally and blocked every real hash. Replaced with `left(password_hash, 10) = '$argon2id$'`; a test inserts real and fake hashes to prove it.
+- First version of redaction matched substrings (`pin` would hide `shipping_address`). Switched to whole-word matching, with a test.
+
+**Results:** `pytest` ✅ **84 passed** · `ruff` ✅ · `alembic check` ✅ (models = migrations)
+
+**👉 Your step:** create the first admin account (choose your own password):
+`cd backend` → `uv run python -m scripts.create_user` → role `admin`
+
+**Next:** Day 6 — login API: JWT tokens, deny-by-default role checks on every endpoint, lockout after repeated failures, rate limiting.
