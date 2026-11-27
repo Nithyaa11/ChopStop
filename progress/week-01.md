@@ -345,3 +345,10 @@
 - Delay is a flag, not a status.
 - Kitchen queue sorted by spare time.
 - Live updates.
+
+### Extra — Thu 27 Nov (dev port)
+- 8000 and 8001 are taken by other apps on this PC, so the project's dev API port is now **8010**.
+- New command `uv run python -m scripts.dev` (run from `backend/`): starts the API on `127.0.0.1:8010` with auto-reload. Localhost only, not reachable from the network.
+- `API_PORT` setting (default 8010, range-checked 1024–65535, test added). README updated to 8010 everywhere.
+- Reminder: `uv run ...` commands must be run from `backend/` (prompt ends in `ackend>`).
+- `pytest` ✅ **154 passed**.

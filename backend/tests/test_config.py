@@ -60,3 +60,10 @@ def test_app_and_migrator_must_differ() -> None:
 def test_placeholder_migrator_password_rejected() -> None:
     with pytest.raises(ValidationError):
         make(migrator_database_url="postgresql+psycopg://chopstop:change-me@localhost:5432/db")
+
+
+def test_dev_port_defaults_to_8010_and_is_range_checked() -> None:
+    assert make().api_port == 8010
+    for bad in (80, 70000):
+        with pytest.raises(ValidationError):
+            make(api_port=bad)

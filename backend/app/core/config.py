@@ -8,7 +8,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import SecretStr, field_validator, model_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.engine import make_url
 
@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     jwt_secret: SecretStr
     jwt_expire_minutes: int = 60
     cors_origins: str = "http://localhost:5173"
+    # Local dev server port (scripts.dev). 8000/8001 are used by other apps on this machine.
+    api_port: int = Field(default=8010, ge=1024, le=65535)
 
     @field_validator("jwt_secret")
     @classmethod

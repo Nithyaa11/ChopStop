@@ -138,9 +138,9 @@ uv sync
 uv run python -m scripts.setup_db_roles   # once: creates the limited chopstop_app DB user
 uv run alembic upgrade head
 uv run python -m scripts.create_user     # once: create the first admin (hidden password prompt)
-uv run uvicorn app.main:app --reload
+uv run python -m scripts.dev             # API on port 8010
 ```
-API: http://localhost:8000 · Docs: http://localhost:8000/docs
+API: http://127.0.0.1:8010 · Docs: http://127.0.0.1:8010/docs
 
 ### 4. Run the frontend
 ```bash
@@ -154,7 +154,8 @@ App: http://localhost:5173
 
 ## Everyday commands (what you should see)
 
-Run backend commands from `backend/`. Docker Desktop must be running.
+Run `uv run ...` commands from `backend/` (prompt ends in `ackend>`). Docker Desktop must be running.
+Dev API port is **8010** (8000/8001 are taken by other apps on this machine).
 
 | Command | What it does | Expected output |
 |---|---|---|
@@ -166,15 +167,15 @@ Run backend commands from `backend/`. Docker Desktop must be running.
 | `uv run python -m scripts.create_user` | Add a user (hidden password prompt) | `Created cook 'ravi' (id 2).` |
 | `uv run python -m scripts.show_audit` | Last 20 audit entries | a table of who / action / when |
 | `uv run python -m scripts.setup_db_roles` | Re-apply the limited DB user (safe to repeat) | `OK: database user 'chopstop_app' ...` |
-| `uv run uvicorn app.main:app --reload` | Start the API | `Application startup complete.` |
-| `curl http://localhost:8000/health` | Is the API + DB OK? | `{"status":"ok","database":"ok"}` |
+| `uv run python -m scripts.dev` | Start the API on port 8010 | `Uvicorn running on http://127.0.0.1:8010` … `Application startup complete.` |
+| `curl http://127.0.0.1:8010/health` | Is the API + DB OK? | `{"status":"ok","database":"ok"}` |
 | `uv run pre-commit run --all-files` | All commit checks | every line `Passed` |
 
 ---
 
 ## API
 
-Interactive docs (development only, switched off in production): **http://localhost:8000/docs**.
+Interactive docs (development only, switched off in production): **http://127.0.0.1:8010/docs**.
 Click **Authorize**, enter a username + password, then try any endpoint.
 
 **Deny by default:** every endpoint declares which roles may use it, and a test fails
