@@ -4,7 +4,7 @@ import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import OperationalError
@@ -12,6 +12,9 @@ from sqlalchemy.exc import OperationalError
 from app.core.config import get_settings
 from app.core.db import get_engine, ping_database
 from app.core.db_roles import assert_least_privilege
+from app.modules.auth.deps import public
+from app.modules.auth.router import router as auth_router
+from app.modules.users.router import router as users_router
 
 logger = logging.getLogger("chopstop")
 
@@ -62,7 +65,21 @@ def create_app() -> FastAPI:
         allow_headers=["Authorization", "Content-Type"],
     )
 
-    @app.get("/health", tags=["system"])
+    @app.middleware("http")
+    async def security_headers(request: Request, call_next: Callable) -> Response:  # type: ignore[type-arg]
+        response: Response = await call_next(request)
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "no-referrer")
+        if not request.url.path.startswith(("/docs", "/openapi.json")):
+            # API data (tokens, users, orders) must never sit in a browser/proxy cache
+            response.headers.setdefault("Cache-Control", "no-store")
+        return response
+
+    app.include_router(auth_router)
+    app.include_router(users_router)
+
+    @app.get("/health", tags=["system"], dependencies=[Depends(public)])
     def health(check_db: Callable[[], bool] = Depends(get_db_checker)) -> JSONResponse:  # noqa: B008
         try:
             check_db()

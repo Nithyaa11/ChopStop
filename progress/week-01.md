@@ -14,7 +14,7 @@
 | 3 | Thu 27 Nov | Alembic set up, first migration | ✅ Done 25 Nov. Audit log pulled forward from Day 7. 25 tests passing |
 | 4 | Fri 28 Nov | CI (ruff + pytest), pre-commit with gitleaks secret scan | ✅ Done 26 Nov, together with the least-privilege DB user. 42 tests |
 | 5 | Sat 29 Nov | Users table, Argon2 hashing, roles (founder, cook, rider, admin) | ✅ Done 27 Nov. 84 tests |
-| 6 | Sun 30 Nov | JWT login, deny-by-default role checks on every endpoint | ⬜ |
+| 6 | Sun 30 Nov | JWT login, deny-by-default role checks on every endpoint | ✅ Done 27 Nov. 115 tests |
 | 7 | Mon 1 Dec | Tests proving each role is blocked where it should be; app writes to the audit log (table done Day 3) | ⬜ |
 
 **Alongside the coding (stage 0, no code):** watch 7 days of real orders. For each day, note the number of Swiggy, Zomato, walk-in and subscription orders, the rush hours, and what caused stress. This decides whether paid Swiggy/Zomato integration is worth it.
@@ -245,3 +245,49 @@
 `cd backend` → `uv run python -m scripts.create_user` → role `admin`
 
 **Next:** Day 6 — login API: JWT tokens, deny-by-default role checks on every endpoint, lockout after repeated failures, rate limiting.
+
+### Day 6 — Thu 27 Nov (login API, tokens, deny-by-default)
+**Done**
+- Branch `feat/auth-login`. Added `pyjwt` and `python-multipart` (the login form, so Swagger's **Authorize** button works).
+- Endpoints:
+  - `POST /auth/login` (public)
+  - `GET /auth/me`
+  - `POST /auth/change-password`
+  - `POST /auth/logout-all`
+  - Admin only: `GET/POST /users`, `POST /users/{id}/role`, `/deactivate`, `/reset-password`
+
+**Guardrails added**
+- 🔒 **Deny by default.** Every endpoint must declare `require_roles(...)` or `public`.
+  - A test walks every route and fails if one has neither.
+  - The public list is pinned to exactly `/health` and `/auth/login`.
+  - The walker is cross-checked against the OpenAPI schema, so it can't silently miss routes.
+  - A self-test proves it catches an unguarded route.
+- 🔒 **The role comes from the database on every request**, not from the token. Role change, deactivation, password change and "log out everywhere" kill old tokens immediately (`token_version`).
+- 🔒 **Tokens:**
+  - HS256 only; `alg: none`, forged signatures, wrong issuer/audience/type and expired tokens are rejected (tests for each).
+  - 60-minute lifetime.
+  - Required claims are enforced.
+- 🔒 **Login:**
+  - Identical answer for unknown user, wrong password, inactive and locked, so usernames can't be probed.
+  - Timing-safe.
+  - **Locks for 15 min after 5 wrong passwords.** An admin password reset unlocks.
+  - **Rate limits:** 10 attempts/min per IP and 10 per 15 min per username → `429` with `Retry-After`.
+- Every login attempt is audited (`login_succeeded` / `login_failed` with reason / `account_locked` / `logout_all`). Passwords are never stored there; a test checks this.
+- Admins can't skip the service rules through the API: weak passwords → 400, last admin protected, reasons required.
+- Security headers on every response: `nosniff`, `X-Frame-Options: DENY`, `no-referrer`, and **`Cache-Control: no-store`** so tokens and user data are never cached.
+- The password hash never appears in any response.
+
+**Problems hit & fixed**
+- FastAPI 0.165 stores included routers as wrapper objects, so a simple walk of `app.routes` saw only `/health`. The guard test would have passed while checking nothing. Fixed by walking `original_router`, **and** the test now cross-checks against OpenAPI so a future FastAPI change fails loudly.
+
+**Verified live:** `/docs` 200, OAuth2 password flow wired to `auth/login`, `/auth/me` and `/users` give 401 without a token, unknown login gives the generic 401.
+- Note: that smoke test left one permanent `auth.login_failed` row (username `nobody`, from 127.0.0.1) in the dev audit log. Harmless, and it can't be removed by design.
+
+**Results:** `pytest` ✅ **115 passed** · `ruff` ✅ · `alembic check` ✅
+
+**👉 Your steps to try it in Swagger:**
+1. `cd backend` → `uv run python -m scripts.create_user` → role `admin` (the dev DB has no users yet)
+2. `uv run uvicorn app.main:app --reload` → open http://localhost:8000/docs
+3. Click **Authorize** → enter username + password → **Authorize** → try `GET /auth/me`, `GET /users`, `POST /users` (make a cook), then log in as the cook and see `GET /users` → 403
+
+**Next:** Day 7 — wrap up week 1: role matrix tests, README API section, week-1 review. Then week 2: orders.
