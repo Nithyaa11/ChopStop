@@ -13,6 +13,9 @@ Chopstop takes orders from four channels: **Swiggy, Zomato, subscriptions and wa
 ## Status
 
 🚧 **Early development.** Building Layer 1 (core operations) first.
+Done: database, secure config, migrations, append-only audit log, least-privilege DB user,
+users & roles, login API, deny-by-default permissions, CI + secret scanning.
+Daily progress: [`progress/`](progress/).
 
 ---
 
@@ -149,6 +152,51 @@ App: http://localhost:5173
 
 ---
 
+## Everyday commands (what you should see)
+
+Run backend commands from `backend/`. Docker Desktop must be running.
+
+| Command | What it does | Expected output |
+|---|---|---|
+| `docker compose ps` *(repo root)* | Is the database up? | `chopstop-db ... Up ... (healthy)` |
+| `uv run pytest -q` | All tests | `153 passed` (number grows over time) |
+| `uv run ruff check .` | Lint incl. security rules | `All checks passed!` |
+| `uv run alembic current` | Which migration the DB is on | `0003 (head)` |
+| `uv run alembic check` | Do models match migrations? | `No new upgrade operations detected.` |
+| `uv run python -m scripts.create_user` | Add a user (hidden password prompt) | `Created cook 'ravi' (id 2).` |
+| `uv run python -m scripts.show_audit` | Last 20 audit entries | a table of who / action / when |
+| `uv run python -m scripts.setup_db_roles` | Re-apply the limited DB user (safe to repeat) | `OK: database user 'chopstop_app' ...` |
+| `uv run uvicorn app.main:app --reload` | Start the API | `Application startup complete.` |
+| `curl http://localhost:8000/health` | Is the API + DB OK? | `{"status":"ok","database":"ok"}` |
+| `uv run pre-commit run --all-files` | All commit checks | every line `Passed` |
+
+---
+
+## API
+
+Interactive docs (development only, switched off in production): **http://localhost:8000/docs**.
+Click **Authorize**, enter a username + password, then try any endpoint.
+
+**Deny by default:** every endpoint declares which roles may use it, and a test fails
+if one doesn't. The full matrix lives in [`backend/tests/test_role_matrix.py`](backend/tests/test_role_matrix.py).
+
+| Endpoint | admin | founder | cook | rider | Notes |
+|---|:-:|:-:|:-:|:-:|---|
+| `GET /health` | ✅ | ✅ | ✅ | ✅ | Public. API + DB status, no details leaked |
+| `POST /auth/login` | ✅ | ✅ | ✅ | ✅ | Public. Rate-limited; locks after 5 wrong passwords (15 min) |
+| `GET /auth/me` | ✅ | ✅ | ✅ | ✅ | Your own account |
+| `POST /auth/change-password` | ✅ | ✅ | ✅ | ✅ | Own password; returns a new token, old ones stop working |
+| `POST /auth/logout-all` | ✅ | ✅ | ✅ | ✅ | Kills every token for your account |
+| `GET /users` | ✅ | ❌ | ❌ | ❌ | List accounts |
+| `POST /users` | ✅ | ❌ | ❌ | ❌ | Create account |
+| `POST /users/{id}/role` | ✅ | ❌ | ❌ | ❌ | Reason required; last admin protected |
+| `POST /users/{id}/deactivate` | ✅ | ❌ | ❌ | ❌ | Reason required; never deleted |
+| `POST /users/{id}/reset-password` | ✅ | ❌ | ❌ | ❌ | Also unlocks a locked account |
+
+No token → `401`. Wrong role → `403`. Tokens last 60 minutes.
+
+---
+
 ## Environment variables
 
 See `.env.example` for the full list. Never commit `.env`.
@@ -206,8 +254,8 @@ These hold across the codebase:
 
 ## Roadmap
 
-- [ ] **Phase 0** — Repo setup, CI, database, health check
-- [ ] **Phase 1** — Auth, roles, user accounts
+- [x] **Phase 0** — Repo setup, CI, database, health check
+- [x] **Phase 1** — Auth, roles, user accounts
 - [ ] **Phase 2** — Orders (all four channels) + kitchen queue
 - [ ] **Phase 3** — Subscriptions
 - [ ] **Phase 4** — Inventory, recipes, grocery lists

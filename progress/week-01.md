@@ -15,7 +15,7 @@
 | 4 | Fri 28 Nov | CI (ruff + pytest), pre-commit with gitleaks secret scan | ✅ Done 26 Nov, together with the least-privilege DB user. 42 tests |
 | 5 | Sat 29 Nov | Users table, Argon2 hashing, roles (founder, cook, rider, admin) | ✅ Done 27 Nov. 84 tests |
 | 6 | Sun 30 Nov | JWT login, deny-by-default role checks on every endpoint | ✅ Done 27 Nov. 115 tests |
-| 7 | Mon 1 Dec | Tests proving each role is blocked where it should be; app writes to the audit log (table done Day 3) | ⬜ |
+| 7 | Mon 1 Dec | Tests proving each role is blocked where it should be; app writes to the audit log (table done Day 3) | ✅ Done 27 Nov. 153 tests |
 
 **Alongside the coding (stage 0, no code):** watch 7 days of real orders. For each day, note the number of Swiggy, Zomato, walk-in and subscription orders, the rush hours, and what caused stress. This decides whether paid Swiggy/Zomato integration is worth it.
 
@@ -291,3 +291,57 @@
 3. Click **Authorize** → enter username + password → **Authorize** → try `GET /auth/me`, `GET /users`, `POST /users` (make a cook), then log in as the cook and see `GET /users` → 403
 
 **Next:** Day 7 — wrap up week 1: role matrix tests, README API section, week-1 review. Then week 2: orders.
+
+### Day 7 — Thu 27 Nov (week 1 wrap-up)
+**Done**
+- `tests/test_role_matrix.py`: **one table of who-can-call-what**, checked two ways:
+  - the roles declared in code must equal the table (any permission change shows up as a change to this file)
+  - over HTTP, **every role × every endpoint**: allowed roles get past the check, everyone else gets `403`; no token gets `401` everywhere
+  - adding an endpoint without adding it to the table fails the test
+- `scripts/show_audit.py`: read-only view of the latest audit entries (`uv run python -m scripts.show_audit`).
+- README:
+  - status updated
+  - **Everyday commands** table with the expected output of each (every command verified)
+  - **API** section with the role matrix
+  - roadmap phases 0 and 1 ticked
+
+**Results:** `pytest` ✅ **153 passed** · `ruff` ✅ · `pre-commit --all-files` ✅ all passed · `alembic current` = `0003 (head)`
+
+---
+
+## Week 1 review
+
+**Planned:** repo, DB, health check, CI, auth, roles, audit log, by 1 Dec.
+**Actual:** all of it done by **27 Nov**, plus a least-privilege DB user that wasn't in the plan. **~4 days ahead.**
+
+| Area | What exists now |
+|---|---|
+| Database | Postgres 16 in Docker, localhost only, password required for every connection, auto-restarts |
+| Migrations | Alembic `0001`–`0003`; a test fails if models and migrations drift |
+| Audit log | Append-only, enforced by **privileges and a trigger**; sensitive fields redacted |
+| DB users | Owner (migrations only) and `chopstop_app` (app); app refuses to start as a powerful user |
+| Accounts | 4 roles; Argon2id; DB rejects plaintext; never deleted; last admin protected |
+| Login | JWT, lockout, rate limits, generic errors, timing-safe, instant revocation |
+| Permissions | Deny by default; role matrix test; only `/health` and `/auth/login` public |
+| Safety net | 153 tests, ruff security rules, gitleaks (with a custom DB-URL rule), pre-commit, CI on every push |
+
+**Gaps found & closed this week:**
+1. Postgres trusted in-container connections without a password.
+2. The DB owner could disable audit triggers, fixed with a least-privilege user.
+3. gitleaks missed database URLs, fixed with a custom rule.
+4. Windows `localhost`→IPv6 caused hangs, fixed with `127.0.0.1` and timeouts.
+5. The FastAPI route walk silently saw only 1 route, fixed with an OpenAPI cross-check.
+6. Alembic's `%%` escaping could have blocked all real password hashes.
+
+**Still open (carried to week 2+):**
+- `httpx2` test-client warning: vet the package before switching.
+- Go-live checklist: server DB owner must not be a superuser; real HTTPS; backups + restore test.
+- Rate limiter is in-memory: fine for one server process; move to DB/Redis if we ever run more.
+- Stage 0 (no code): 7 days of real order counts and rush hours; money conversation with the founders.
+
+**Next week (week 2): orders + kitchen**
+- Orders from all 4 channels, with duplicate Swiggy/Zomato order IDs blocked by the DB.
+- A fixed list of allowed status steps.
+- Delay is a flag, not a status.
+- Kitchen queue sorted by spare time.
+- Live updates.
