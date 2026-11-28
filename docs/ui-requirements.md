@@ -54,7 +54,7 @@ frontend is built (week 3). Each item notes who asked for it and when.
 | `preparing` | Preparing |
 | `ready` | Ready |
 | `out_for_delivery` | **On the way** |
-| `completed` | Completed (delivered / collected) |
+| `completed` | **Delivered** (Swiggy, Zomato, subscription) / **Served** (walk-in) |
 | `cancelled` | Cancelled |
 
 (Source of truth: `STATUS_LABELS` in `backend/app/modules/orders/models.py`.)
@@ -63,7 +63,9 @@ frontend is built (week 3). Each item notes who asked for it and when.
 
 - **Swiggy, Zomato, subscription:** Ready → **rider picks up → On the way** → Delivered = Completed.
   Can't jump from Ready to Completed. *(Requested by Nithyaa, 28 Nov 2026)*
-- **Walk-in:** Ready → Collected = Completed. Never "On the way".
+- **Walk-in (customers eat at the table):** Ready → the helper takes the food to the table → **Served** = Completed. Never "On the way". *(Clarified by Nithyaa, 29 Nov 2026)*
+- On screen, "Completed" is shown as **"Delivered"** for delivery channels and **"Served"** for walk-ins.
+- Open: the helper has no login, so who taps "Served": the cook, Mom/Aunt, or a simple helper login? (founder-questions 3f-2)
 - Buttons shown on a card are only the next steps allowed for that channel.
 
 ## Open questions (for the founders)

@@ -51,7 +51,7 @@ We need the real menu to set up the system. A photo of the menu or a list is fin
 
 ## 🔴 3. How orders flow: needed this week
 
-- **3a.** **Who types the orders into the system?** Mom, Aunt, or both? Is it the same for Swiggy, Zomato and walk-ins? (The hired cook can't enter orders: her screen is kitchen only.)
+- **3a.** **Walk-in orders: who adds them to the Chopstop app?** When a customer orders at the counter, someone puts that order into our app (the new kitchen system we're building) so it shows up on the kitchen screen. Is that Mom, Aunt, or whoever is free? (The hired cook can't: her screen is kitchen only.) Swiggy/Zomato orders should come in **automatically** (see section 9). Until that's set up, who copies them in?
   > Answer:
 - **3b.** When a Swiggy or Zomato rider picks up an order, our system will show it as **"On the way"**. The apps don't tell us when it's delivered. What should happen next?
   - [ ] Someone taps **"Delivered"**
@@ -64,7 +64,10 @@ We need the real menu to set up the system. A photo of the menu or a list is fin
 - **3e.** Typo safety limits. Do these sound right?
   - Max ₹10,000 for one item · max ₹1,00,000 for one order · max 50 of the same dish in one order
   > Answer:
-- **3f.** Do walk-in customers ever get **delivery** (by our riders)? Or do they always collect?
+- **3f.** ✅ Answered: walk-in customers eat **at the table**. When the cook finishes, the **helper takes the food to the customer's table**. So for walk-ins, "Completed" means **"Served"**.
+- **3f-2.** The helper has no login. **Who taps "Served"** in the app: the cook when she hands the plate to the helper, or Mom/Aunt? Or should the helper get a simple login just for this one button?
+  > Answer:
+- **3f-3.** Do walk-in customers ever take food **away (parcel)** instead of eating there?
   > Answer:
 - **3g.** How long before pickup does Swiggy/Zomato usually give you? What's a normal **"due" time** for each channel?
   > Answer:
@@ -136,17 +139,76 @@ The system is designed for this from day one, but we can't build it until we und
   > Answer:
 - **8b.** Which **tablet or phone** will the kitchen use? Is there reliable Wi-Fi in the kitchen?
   > Answer:
-- **8c.** Later, connecting Swiggy/Zomato automatically needs a paid partner (e.g. UrbanPiper, Petpooja). Should we ask them for a **written price quote**? (We won't sign up for anything without one.)
-  > Answer:
 - **8d.** Any customer data we must be careful about, or anything customers have asked us not to store?
+  > Answer:
+
+---
+
+## 🔴 9. Swiggy & Zomato orders coming in AUTOMATICALLY: decide soon
+
+**Goal:** when an order is accepted on Swiggy/Zomato, it appears in the Chopstop app by itself. Nobody types it.
+
+**The catch:** Swiggy and Zomato don't give small restaurants a direct connection (API). The only **official** way is through an **approved integration partner**. The partner receives the orders from Swiggy/Zomato and passes them to our system. Here are all the options:
+
+| Option | Cost | Safe? | How it works | Verdict |
+|---|---|---|---|---|
+| **A. Integration partner** (UrbanPiper, or similar POS-integration companies) | **Paid.** Prices aren't published; third-party reports range from about ₹700 to ₹15,000 per month depending on the plan. **Must get a written quote.** | ✅ Official, approved by Swiggy/Zomato | Partner sends each order to our system the moment it comes in | ✅ **Recommended**, if the quote fits the budget |
+| **B. A POS that already connects** (e.g. Petpooja) | **Paid** yearly subscription | ✅ Official | Orders go into *their* POS. We'd need them to also pass orders on to our system, which not all do. **Must ask** | 🟡 Only if they can send orders to our system |
+| **C. Type them in** (the earlier plan) | Free | ✅ Safe | Someone copies each order into our app (about 20 seconds, duplicates blocked) | 🟡 **Only a stop-gap** until A is set up |
+| **D. Reading the Swiggy/Zomato apps automatically** (scraping, reading phone notifications, bots) | "Free" | ❌ **Not safe.** Breaks Swiggy/Zomato rules; the restaurant account can be **suspended**, and it breaks whenever their app updates | — | ❌ **Don't use** |
+
+**Questions to decide:**
+- **9a.** Can we contact **UrbanPiper** (and 1–2 similar companies) for a **written quote** for 1 outlet with Swiggy + Zomato? (We won't sign up for anything without a written price.)
+  > Answer:
+- **9b.** What monthly cost for this would be okay? ₹______ / month
+  > Answer:
+- **9c.** Do you already use any POS or billing software (Petpooja, etc.)? If yes, which one?
+  > Answer:
+
+**Questions to ask the integration companies** (for the quote call):
+1. Total cost per month for **1 outlet, Swiggy + Zomato**, including setup fees and GST?
+2. Can you **send each order to our own system** automatically (they may call it "webhook" or "POS API")? We have our own app.
+3. When an order is accepted on Swiggy/Zomato, how fast does it reach us?
+4. Can we still accept and reject orders in the Swiggy/Zomato partner apps, or only through you?
+5. Does it also update **"food ready"** or **item out of stock** back to Swiggy/Zomato?
+6. Minimum contract length? Can we cancel any month?
+
+---
+
+## 🟡 10. WhatsApp for subscriptions: options
+
+**You're right that the WhatsApp Business *API* isn't straightforward**, but it's possible:
+- You need a **Meta Business account**, plus business verification (documents).
+- Usually you go through a **WhatsApp partner company** (called a "BSP") that handles the setup for a monthly fee.
+- Meta now allows **"coexistence"**: the **same number** can stay on the normal WhatsApp Business app (Mom keeps using it on her phone) **and** be connected to the API, so you don't lose the number.
+
+| Option | Cost | Safe? | What it gives | Verdict |
+|---|---|---|---|---|
+| **A. Normal WhatsApp Business app + pick link** | **Free** | ✅ | Mom sends one broadcast with a link; subscribers tap Salad A or B; replies land in our app automatically; reminders are one tap | ✅ **Start here**: no setup, no cost |
+| **B. WhatsApp Business API through a partner company** (e.g. Interakt, AiSensy, Wati, or Meta directly) | **Paid:** partner's monthly fee **plus** Meta's per-message charge. Recent rates: about ₹0.86 per marketing message and about ₹0.12 per utility message, plus GST (confirm with Meta) | ✅ Official | Our app sends the daily menu and reminders **by itself**, and reads replies **by itself** | 🟡 **Later**, if sending broadcasts by hand becomes a burden |
+| **C. Unofficial WhatsApp tools/bots** (apps that log in as your phone) | "Free" | ❌ **Not safe:** WhatsApp can **ban the number**, and all subscribers lose their way to reach you | — | ❌ **Don't use** |
+
+**Questions to decide:**
+- **10a.** Is it okay to **start with option A** (free) and move to B later only if needed?
+  > Answer:
+- **10b.** Which number do subscribers message today? Is it already a **WhatsApp Business** number, or a normal WhatsApp number?
+  > Answer:
+- **10c.** Is the business **registered** (GST / shop licence)? Meta asks for this to verify the business for the API.
   > Answer:
 
 ---
 
 ## ✅ Already decided (just for reference, no need to ask)
 
-- Swiggy/Zomato orders are **typed in by hand** for now. No scraping their apps (it breaks their rules and could get the account suspended).
-- No WhatsApp bots or unofficial tools (the number could get banned). We use the normal WhatsApp Business app plus a pick link.
-- Delivery orders go **Ready → On the way → Completed**. Walk-ins go **Ready → Completed**.
+- Safety rule: **no scraping, bots or unofficial tools** for Swiggy, Zomato or WhatsApp. They can get the restaurant account suspended or the number banned. Only official routes (sections 9 and 10).
+- Delivery orders go **Ready → On the way → Delivered**. Walk-ins (eat at the table) go **Ready → Served**.
+- Roles: Mom and Aunt = admin (everything); hired cook = kitchen screen only; 2 delivery boys = their own deliveries; helper = no login for now.
 - Orders are never deleted. Every change is recorded with who did it and when.
 - The AI (later) only **suggests**. A person always approves. It can never change prices, spend money or cancel orders on its own.
+
+---
+
+*Sources for prices (third-party, may be out of date; always get a written quote):*
+- *UrbanPiper pricing not published; reported ranges: swadeshiapps.com/business/urbanpiper, techarion.com (2025 POS comparison), codingclave.com (2026 POS roundup)*
+- *WhatsApp per-message rates (India, 2026): amomic.in, digitaltoolbox.in; confirm on Meta's pricing page*
+- *WhatsApp coexistence (same number on app + API): docs.360dialog.com, support.wati.io*

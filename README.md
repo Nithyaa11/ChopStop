@@ -259,7 +259,7 @@ These hold across the codebase:
 4. **Don't assume ingredient usage.** An order coming in doesn't mean ingredients were used; stock changes are recorded explicitly.
 5. **The app works without AI.** The harness reads from the app; the app never depends on the harness.
 6. **Humans approve consequential actions.** Anything the AI suggests that spends money, changes the menu or contacts customers needs approval.
-7. **Manual entry first** for Swiggy and Zomato until integrations are in place.
+7. **Swiggy/Zomato orders come in automatically** through an approved integration partner (quote pending). Manual entry is only a stop-gap. **Never** scraping, bots or unofficial tools for Swiggy, Zomato or WhatsApp.
 
 ---
 

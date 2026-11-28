@@ -115,3 +115,33 @@
 - `docs/founder-questions.md`: section 2 marked answered, with 2 follow-ups (login names; helper later). Questions about prices and profit now say "only Mom & Aunt, correct?".
 
 **Results:** `pytest` ✅ **302 passed** · `ruff` ✅ · `alembic check` ✅ · dev DB at `0006`
+
+### Extra — Sat 29 Nov (founder questions v2 + PDF)
+**From Nithyaa:**
+- 3a was unclear: reworded. It now asks who adds **walk-in** orders to the Chopstop app.
+- 3f answered: walk-in customers **eat at the table**, and the helper serves the food. So for walk-ins, "Completed" = **"Served"**. New follow-up: who taps "Served", since the helper has no login?
+- **Swiggy/Zomato must not be typed.** Orders should arrive **automatically** when accepted in their apps, using a safe option.
+- The WhatsApp Business **API** seems hard to get: added the real options.
+
+**Done**
+- `docs/founder-questions.md`:
+  - **Section 9:** automatic Swiggy/Zomato options with cost and safety:
+    - A. approved integration partner (recommended; quote needed; reported ₹700–15,000/month)
+    - B. POS such as Petpooja (only if it can forward orders to us)
+    - C. typing (stop-gap only)
+    - D. scraping or bots (not safe)
+    - Plus 6 questions to ask integration companies on the quote call.
+  - **Section 10:** WhatsApp options:
+    - A. free Business app + pick link (start here)
+    - B. official API through a partner company (Meta verification; "coexistence" keeps the same number; about ₹0.86 per marketing message and ₹0.12 per utility message + GST + partner fee)
+    - C. unofficial bots (not safe)
+  - "Already decided" updated: no scraping or unofficial tools ever; Delivered vs Served; roles.
+- **`docs/founder-questions.pdf`**: printable A4 version.
+  - Answer boxes to write in; blank menu table rows.
+  - **NOW / SOON / LATER** labels (emoji can't print).
+  - ₹ shown correctly (Segoe UI font). Every page checked by rendering it to an image.
+- `tools/md_to_pdf.py`: rebuilds the PDF after edits (command in the file header).
+- README rule 7: Swiggy/Zomato come in automatically via an approved partner; manual entry is only a stop-gap.
+- `docs/ui-requirements.md`: walk-in = "Served"; completed shown as Delivered / Served.
+
+**Fixed while making the PDF:** empty table rows were dropped; bold lines showed as grey notes; numbered lists lost their numbers; the table labels "NO No" and "SOON" were reworded.
