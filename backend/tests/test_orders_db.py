@@ -16,7 +16,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from app.core.security import hash_password
-from app.modules.orders.models import ALLOWED_TRANSITIONS, Status
+from app.modules.orders.models import TRANSITIONS_BY_SOURCE, Source, Status, allowed_next
 
 HASH = hash_password("kitchen-Rush-42")
 
@@ -179,28 +179,35 @@ def test_new_orders_must_start_as_received(conn: Connection, ids: dict[str, int]
         new_order(conn, ids, status="completed")
 
 
-def _path_to(target: Status) -> list[Status]:
-    """Shortest allowed path from RECEIVED to target (breadth-first)."""
+def _path_to(target: Status, source: Source = Source.SWIGGY) -> list[Status] | None:
+    """Shortest allowed path from RECEIVED to target for this channel, or None."""
     queue: deque[list[Status]] = deque([[Status.RECEIVED]])
     while queue:
         path = queue.popleft()
         if path[-1] == target:
             return path[1:]
-        queue.extend(path + [n] for n in ALLOWED_TRANSITIONS[path[-1]] if n not in path)
-    raise AssertionError(f"{target} unreachable")
+        queue.extend(path + [n] for n in allowed_next(source, path[-1]) if n not in path)
+    return None
 
 
-@pytest.mark.parametrize(
-    ("old", "new"), [(a, b) for a, b in itertools.permutations(Status, 2)], ids=str
-)
+CHANGES = [
+    (src, a, b)
+    for src in Source
+    for a, b in itertools.permutations(Status, 2)
+    if _path_to(a, src) is not None  # e.g. walk-ins can never be "on the way"
+]
+
+
+@pytest.mark.parametrize(("source", "old", "new"), CHANGES, ids=str)
 def test_every_status_change_matches_the_rules(
-    conn: Connection, ids: dict[str, int], old: Status, new: Status
+    conn: Connection, ids: dict[str, int], source: Source, old: Status, new: Status
 ) -> None:
-    """All 30 possible changes: allowed ones succeed, every other one is refused."""
-    order_id = new_order(conn, ids)
-    for step in _path_to(old):
+    """Every possible change, per channel: allowed ones succeed, all others are refused."""
+    ext = None if source in (Source.WALK_IN, Source.SUBSCRIPTION) else "auto"
+    order_id = new_order(conn, ids, source=source, external_id=ext)
+    for step in _path_to(old, source) or []:
         set_status(conn, order_id, step, reason="test" if step == Status.CANCELLED else None)
-    allowed = new in ALLOWED_TRANSITIONS[old]
+    allowed = new in allowed_next(source, old)
     with conn.begin_nested() as sp:
         try:
             set_status(conn, order_id, new, reason="test")
@@ -208,7 +215,37 @@ def test_every_status_change_matches_the_rules(
         except DBAPIError:
             ok = False
             sp.rollback()
-    assert ok == allowed, f"{old} -> {new}: expected {'allowed' if allowed else 'refused'}"
+    assert ok == allowed, (
+        f"{source}: {old} -> {new}: expected {'allowed' if allowed else 'refused'}"
+    )
+
+
+@pytest.mark.parametrize("source", ["swiggy", "zomato", "subscription"])
+def test_delivery_orders_must_go_on_the_way_before_completed(
+    conn: Connection, ids: dict[str, int], source: str
+) -> None:
+    order_id = new_order(
+        conn, ids, source=source, external_id=None if source == "subscription" else "auto"
+    )
+    for step in ("preparing", "ready"):
+        set_status(conn, order_id, step)
+    with conn.begin_nested() as sp:
+        with pytest.raises(DBAPIError, match="not allowed for"):
+            set_status(conn, order_id, "completed")  # skipping "on the way"
+        sp.rollback()
+    set_status(conn, order_id, "out_for_delivery")  # rider picked it up
+    set_status(conn, order_id, "completed")  # delivered
+
+
+def test_walk_ins_are_collected_never_on_the_way(conn: Connection, ids: dict[str, int]) -> None:
+    order_id = new_order(conn, ids, source="walk_in", external_id=None)
+    for step in ("preparing", "ready"):
+        set_status(conn, order_id, step)
+    with conn.begin_nested() as sp:
+        with pytest.raises(DBAPIError, match="not allowed for"):
+            set_status(conn, order_id, "out_for_delivery")
+        sp.rollback()
+    set_status(conn, order_id, "completed")  # collected at the counter
 
 
 def test_status_change_updates_timestamp(conn: Connection, ids: dict[str, int]) -> None:
@@ -264,10 +301,16 @@ def test_delay_is_a_flag_alongside_status_and_needs_reason(
     assert (row.status, row.is_delayed) == ("preparing", True)
 
 
-def test_migration_transitions_match_the_app() -> None:
-    migration = import_module("migrations.versions.20261128_0004_menu_orders_order_items")
-    in_db = {Status(a): {Status(b) for b in bs} for a, bs in migration.TRANSITIONS.items()}
-    in_app = {a: set(bs) for a, bs in ALLOWED_TRANSITIONS.items() if bs}
+def test_latest_migration_transitions_match_the_app() -> None:
+    migration = import_module("migrations.versions.20261128_0005_status_steps_by_channel")
+    in_db = {
+        Source(src): {Status(a): {Status(b) for b in bs} for a, bs in steps.items()}
+        for src, steps in migration.TRANSITIONS.items()
+    }
+    in_app = {
+        src: {a: set(bs) for a, bs in steps.items() if bs}
+        for src, steps in TRANSITIONS_BY_SOURCE.items()
+    }
     assert in_db == in_app
 
 

@@ -73,3 +73,21 @@
 3. Typo caps: ₹10,000 per item, ₹1,00,000 per order, 50 of one item.
 
 **Next:** Day 9 — order service + API: create orders (manual entry), menu management, who can do what, audit.
+
+### Day 8b — Fri 28 Nov (delivery steps per channel — requested change)
+**Requested:** when a rider picks up an order it should show "on the way", and only when delivered become "completed". Completed orders should sit in a separate clickable box on the same page.
+
+**Done**
+- Migration `0005` (new migration; `0004` is already on `main`, and pushed migrations are never edited): status rules now depend on the **channel**.
+  - **Swiggy, Zomato, subscription:** `ready → on the way → completed (delivered)`. **Can't skip "on the way"** (DB refuses).
+  - **Walk-in:** `ready → completed (collected)`. **Can never be "on the way"** (DB refuses).
+- Screen labels: `out_for_delivery` is shown as **"On the way"**, `received` as **"New"** (`STATUS_LABELS`).
+- `docs/ui-requirements.md` (new): orders page layout. Live orders grouped by step, with **"Completed today (N) ▸" and "Cancelled today (N) ▸" as collapsible boxes** at the bottom, closed by default. Delay shown as a badge. Only allowed next-step buttons shown. To be built in week 3.
+- Tests: every status change **for every channel** (115 combinations), plus explicit "must go on the way" and "walk-ins never on the way" tests, and a check that migration `0005`'s frozen rules equal the app's rules.
+
+**Results:** ✅ 309 tests passed · `ruff` ✅ · `alembic check` ✅
+- ⚠️ One full run took 50 min instead of ~30 s. A rerun with timings took **32.7 s** (slowest test 1.1 s), with no stuck DB connections, so the cause was the machine (most likely sleep), not the code.
+
+**Open questions for the founders** (also in `docs/ui-requirements.md`)
+1. Swiggy/Zomato don't tell us when their rider delivers. Who taps "Delivered", or auto-complete after X minutes "On the way"?
+2. Does "Completed today" mean since midnight IST, or since opening time?

@@ -1,9 +1,10 @@
 """Orders from all four channels, and their line items.
 
-Guardrails (database-enforced, see migration 0004):
+Guardrails (database-enforced, see migrations 0004 and 0005):
   * No duplicates: unique (source, external_order_id). Swiggy/Zomato must have an ID.
-  * Status can only move along ALLOWED_TRANSITIONS (a trigger rejects anything else);
-    completed and cancelled are final.
+  * Status can only move along TRANSITIONS_BY_SOURCE (a trigger rejects anything else):
+    delivery orders must go ready -> on the way -> completed; walk-ins go
+    ready -> completed. Completed and cancelled are final.
   * Delay is a flag (is_delayed), not a status, and needs a reason.
   * Cancelling needs a reason.
   * Money is whole paise. Each line total = unit price x quantity, and the order
@@ -47,23 +48,54 @@ class Source(enum.StrEnum):
 class Status(enum.StrEnum):
     RECEIVED = "received"  # entered, not started
     PREPARING = "preparing"  # kitchen is cooking
-    READY = "ready"  # packed, waiting for pickup / rider / customer
-    OUT_FOR_DELIVERY = "out_for_delivery"  # with our own rider (subscriptions)
-    COMPLETED = "completed"  # handed over / delivered / served
+    READY = "ready"  # packed, waiting for the rider / customer
+    OUT_FOR_DELIVERY = "out_for_delivery"  # picked up by a rider, on the way
+    COMPLETED = "completed"  # delivered (delivery) / collected (walk-in)
     CANCELLED = "cancelled"
 
 
-# The only status changes allowed. Mirrored exactly in the DB trigger (a test checks).
-ALLOWED_TRANSITIONS: dict[Status, frozenset[Status]] = {
-    Status.RECEIVED: frozenset({Status.PREPARING, Status.CANCELLED}),
-    Status.PREPARING: frozenset({Status.READY, Status.CANCELLED}),
-    Status.READY: frozenset({Status.OUT_FOR_DELIVERY, Status.COMPLETED, Status.CANCELLED}),
-    Status.OUT_FOR_DELIVERY: frozenset({Status.COMPLETED, Status.CANCELLED}),
-    Status.COMPLETED: frozenset(),
-    Status.CANCELLED: frozenset(),
+# What people see on screen
+STATUS_LABELS: dict[Status, str] = {
+    Status.RECEIVED: "New",
+    Status.PREPARING: "Preparing",
+    Status.READY: "Ready",
+    Status.OUT_FOR_DELIVERY: "On the way",
+    Status.COMPLETED: "Completed",
+    Status.CANCELLED: "Cancelled",
 }
 
 PLATFORM_SOURCES = (Source.SWIGGY, Source.ZOMATO)
+# Delivered by a rider (platform rider or ours) vs. collected at the counter
+DELIVERY_SOURCES = (Source.SWIGGY, Source.ZOMATO, Source.SUBSCRIPTION)
+
+_OPEN_CANCEL = {
+    Status.RECEIVED: {Status.PREPARING, Status.CANCELLED},
+    Status.PREPARING: {Status.READY, Status.CANCELLED},
+}
+
+# The only status changes allowed, per channel. Mirrored in the DB trigger (a test checks).
+#   delivery: ready -> on the way -> completed (delivered). Can't skip "on the way".
+#   walk-in:  ready -> completed (collected). Never "on the way".
+TRANSITIONS_BY_SOURCE: dict[Source, dict[Status, frozenset[Status]]] = {}
+for _src in Source:
+    _ready_next = (
+        {Status.OUT_FOR_DELIVERY, Status.CANCELLED}
+        if _src in DELIVERY_SOURCES
+        else {Status.COMPLETED, Status.CANCELLED}
+    )
+    TRANSITIONS_BY_SOURCE[_src] = {
+        **{k: frozenset(v) for k, v in _OPEN_CANCEL.items()},
+        Status.READY: frozenset(_ready_next),
+        Status.OUT_FOR_DELIVERY: frozenset(
+            {Status.COMPLETED, Status.CANCELLED} if _src in DELIVERY_SOURCES else set()
+        ),
+        Status.COMPLETED: frozenset(),
+        Status.CANCELLED: frozenset(),
+    }
+
+
+def allowed_next(source: Source | str, status: Status | str) -> frozenset[Status]:
+    return TRANSITIONS_BY_SOURCE[Source(source)][Status(status)]
 
 
 def _in(values: tuple[str, ...]) -> str:
