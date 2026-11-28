@@ -10,6 +10,19 @@ Chopstop takes orders from four channels: **Swiggy, Zomato, subscriptions and wa
 
 ---
 
+## Vision
+
+1. **Now:** build Chopstop for our own kitchen. It runs the daily operations, keeps the money straight, and learns the business.
+2. **Then:** prove it in real daily use for a few months after the Dec 2026 MVP.
+3. **Later:** reuse the same system for **other small, subscription-led cloud kitchens**.
+
+The product focus is what a general restaurant POS doesn't cover well: **daily-choice subscriptions**, reducing the manager's mental load, the real money picture, and AI advice that is measured afterwards.
+Billing and GST invoices are left to existing POS and integration partners.
+
+**Design choices that keep "later" possible without slowing "now":** nothing kitchen-specific is hard-coded (names, prices, roles, timings live in data or settings); every module talks through services; all data is exportable. Multi-kitchen support (separating each kitchen's data) is **not** built yet. It's a later phase, decided after real use.
+
+---
+
 ## Status
 
 🚧 **Early development.** Building Layer 1 (core operations) first.
