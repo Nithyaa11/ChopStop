@@ -91,3 +91,10 @@
 **Open questions for the founders** (also in `docs/ui-requirements.md`)
 1. Swiggy/Zomato don't tell us when their rider delivers. Who taps "Delivered", or auto-complete after X minutes "On the way"?
 2. Does "Completed today" mean since midnight IST, or since opening time?
+
+### Extra — Fri 28 Nov (founder questions)
+- `docs/founder-questions.md`: every open question, in priority order, with space for answers.
+  - 🔴 this week: menu with prices and cook times; people and roles; how orders flow (who enters them, the "Delivered" tap vs auto-complete, cancel + re-enter, "today", typo limits, due times); 7 days of real order counts (stage 0).
+  - 🟡 next 2–3 weeks: subscriptions (plans, cutoff, pick link); groceries (amounts, suppliers, buffer); money (commissions, payouts, business vs personal).
+  - 🟢 later: running cost, tablet and Wi-Fi, integration quote, customer data.
+- Nithyaa asks the founders tomorrow (29 Nov). The answers shape Day 9's menu and order API.
