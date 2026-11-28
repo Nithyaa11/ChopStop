@@ -227,7 +227,7 @@ def footer(canvas, doc) -> None:  # noqa: ANN001
     canvas.saveState()
     canvas.setFont("Segoe", 8)
     canvas.setFillColor(MUTED)
-    canvas.drawString(15 * mm, 10 * mm, "Chopstop: questions for the founders")
+    canvas.drawString(15 * mm, 10 * mm, doc.title)
     canvas.drawRightString(195 * mm, 10 * mm, f"Page {doc.page}")
     canvas.restoreState()
 
@@ -235,9 +235,12 @@ def footer(canvas, doc) -> None:  # noqa: ANN001
 def main() -> None:
     src, out = sys.argv[1], sys.argv[2]
     md = open(src, encoding="utf-8").read()
+    # Footer/PDF title = the document's first "# " heading
+    heading = next((ln[2:].strip() for ln in md.splitlines() if ln.startswith("# ")), "Chopstop")
+    title = heading if heading.lower().startswith("chopstop") else f"Chopstop: {heading}"
     doc = SimpleDocTemplate(out, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm,
                             topMargin=15 * mm, bottomMargin=17 * mm,
-                            title="Chopstop: questions for the founders", author="Chopstop")
+                            title=title, author="Chopstop")
     story = convert(md)
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     print("wrote", out)

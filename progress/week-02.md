@@ -145,3 +145,22 @@
 - `docs/ui-requirements.md`: walk-in = "Served"; completed shown as Delivered / Served.
 
 **Fixed while making the PDF:** empty table rows were dropped; bold lines showed as grey notes; numbered lists lost their numbers; the table labels "NO No" and "SOON" were reworded.
+
+### Extra — Sat 29 Nov (guide for Mom)
+- `docs/guide-for-mom-swiggy-zomato-whatsapp.md` + **`.pdf`** (5 pages), in plain language for Mom. It covers:
+  - what we want; why we can't connect directly ("approved middle company", like GPay for a bank)
+  - the 3 companies (UrbanPiper, LimeTray, Restrologic) and what we know about each, with honest notes on unreliable prices
+  - the **POC**: no self sign-up; you must talk to their sales person first
+  - unsafe shortcuts (screen reading, unofficial bots); why not Petpooja/POS as the main system
+  - the UrbanPiper overlap (supplier, not a replacement; don't pay twice)
+  - auto on/off safety rules
+  - step-by-step how to start; what to keep ready (FSSAI, Swiggy/Zomato IDs, GST)
+  - questions to ask on the call, plus warning signs
+  - a ready-to-send message; WhatsApp options
+  - **7 decisions with answer boxes**
+- Checked the research pasted from elsewhere:
+  - Swiggy/Zomato needing middleware: confirmed
+  - LimeTray Merge: confirmed
+  - Restrologic: exists, but prices are unverified and inconsistent, and the site targets large businesses
+  - "Wera Merge API": not found; probably mixed up with LimeTray
+- `tools/md_to_pdf.py`: footer now uses each document's own title.
