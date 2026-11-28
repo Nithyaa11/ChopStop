@@ -173,6 +173,16 @@ Dev API port is **8010** (8000/8001 are taken by other apps on this machine).
 
 ---
 
+## Roles
+
+| Role | Who | Access |
+|---|---|---|
+| `admin` | Mom, Aunt | Everything: orders, kitchen, menu, groceries, accounts, money |
+| `cook` | Hired cook | Kitchen screen only. No money, prices, accounts or customer details |
+| `rider` | 2 delivery boys | Only their own deliveries (customer contact until delivered) |
+
+---
+
 ## API
 
 Interactive docs (development only, switched off in production): **http://127.0.0.1:8010/docs**.
@@ -181,18 +191,18 @@ Click **Authorize**, enter a username + password, then try any endpoint.
 **Deny by default:** every endpoint declares which roles may use it, and a test fails
 if one doesn't. The full matrix lives in [`backend/tests/test_role_matrix.py`](backend/tests/test_role_matrix.py).
 
-| Endpoint | admin | founder | cook | rider | Notes |
-|---|:-:|:-:|:-:|:-:|---|
-| `GET /health` | ✅ | ✅ | ✅ | ✅ | Public. API + DB status, no details leaked |
-| `POST /auth/login` | ✅ | ✅ | ✅ | ✅ | Public. Rate-limited; locks after 5 wrong passwords (15 min) |
-| `GET /auth/me` | ✅ | ✅ | ✅ | ✅ | Your own account |
-| `POST /auth/change-password` | ✅ | ✅ | ✅ | ✅ | Own password; returns a new token, old ones stop working |
-| `POST /auth/logout-all` | ✅ | ✅ | ✅ | ✅ | Kills every token for your account |
-| `GET /users` | ✅ | ❌ | ❌ | ❌ | List accounts |
-| `POST /users` | ✅ | ❌ | ❌ | ❌ | Create account |
-| `POST /users/{id}/role` | ✅ | ❌ | ❌ | ❌ | Reason required; last admin protected |
-| `POST /users/{id}/deactivate` | ✅ | ❌ | ❌ | ❌ | Reason required; never deleted |
-| `POST /users/{id}/reset-password` | ✅ | ❌ | ❌ | ❌ | Also unlocks a locked account |
+| Endpoint | admin | cook | rider | Notes |
+|---|:-:|:-:|:-:|---|
+| `GET /health` | ✅ | ✅ | ✅ | Public. API + DB status, no details leaked |
+| `POST /auth/login` | ✅ | ✅ | ✅ | Public. Rate-limited; locks after 5 wrong passwords (15 min) |
+| `GET /auth/me` | ✅ | ✅ | ✅ | Your own account |
+| `POST /auth/change-password` | ✅ | ✅ | ✅ | Own password; returns a new token, old ones stop working |
+| `POST /auth/logout-all` | ✅ | ✅ | ✅ | Kills every token for your account |
+| `GET /users` | ✅ | ❌ | ❌ | List accounts |
+| `POST /users` | ✅ | ❌ | ❌ | Create account |
+| `POST /users/{id}/role` | ✅ | ❌ | ❌ | Reason required; last admin protected |
+| `POST /users/{id}/deactivate` | ✅ | ❌ | ❌ | Reason required; never deleted |
+| `POST /users/{id}/reset-password` | ✅ | ❌ | ❌ | Also unlocks a locked account |
 
 No token → `401`. Wrong role → `403`. Tokens last 60 minutes.
 

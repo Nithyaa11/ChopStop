@@ -124,7 +124,7 @@ def test_weak_password_rejected(session: Session) -> None:
         )
 
 
-@pytest.mark.parametrize("role", [Role.FOUNDER, Role.COOK, Role.RIDER])
+@pytest.mark.parametrize("role", [Role.COOK, Role.RIDER])
 def test_only_admin_can_create_users(session: Session, role: Role) -> None:
     non_admin = make(session, role=role)
     with pytest.raises(PermissionDeniedError):
@@ -164,20 +164,22 @@ def test_last_admin_cannot_be_deactivated_or_demoted(session: Session) -> None:
     with pytest.raises(UserError, match="last active admin"):
         service.change_role(session, actor=me, user=admin, new_role=Role.COOK, reason="oops")
     second = make(session, role=Role.ADMIN)
-    service.change_role(session, actor=me, user=second, new_role=Role.FOUNDER, reason="promoted")
-    assert second.role == "founder"
+    service.change_role(
+        session, actor=me, user=second, new_role=Role.COOK, reason="back to kitchen"
+    )
+    assert second.role == "cook"
 
 
 def test_role_change_bumps_token_version_and_is_audited(session: Session) -> None:
     admin = make(session, role=Role.ADMIN)
     cook = make(session)
     service.change_role(
-        session, actor=as_actor(admin), user=cook, new_role=Role.FOUNDER, reason="new partner"
+        session, actor=as_actor(admin), user=cook, new_role=Role.RIDER, reason="moved to deliveries"
     )
     session.flush()
     assert cook.token_version == 1
     last = audit_for(session, cook)[-1]
-    assert (last.before["role"], last.after["role"]) == ("cook", "founder")
+    assert (last.before["role"], last.after["role"]) == ("cook", "rider")
 
 
 def test_set_password_rules(session: Session) -> None:
@@ -249,3 +251,11 @@ def test_api_schema_and_repr_never_show_hash(session: Session) -> None:
     assert "password_hash" not in UserOut.model_fields
     assert "argon2" not in UserOut.model_validate(user).model_dump_json()
     assert "argon2" not in repr(user)
+
+
+def test_founder_role_no_longer_exists(session: Session) -> None:
+    """Mom and Aunt are admins; 'founder' was removed (migration 0006)."""
+    with pytest.raises(ValueError):
+        make(session, role="founder")  # type: ignore[arg-type]
+    with pytest.raises(IntegrityError):
+        _raw_insert(session, r="founder")

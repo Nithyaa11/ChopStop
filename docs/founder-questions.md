@@ -22,36 +22,36 @@ We need the real menu to set up the system. A photo of the menu or a list is fin
   > Answer:
 - **1b.** Are there any combos, add-ons or extras (extra cheese, extra dressing)? Do they change the price?
   > Answer:
-- **1c.** Who is allowed to change menu prices? Only founders, or also the manager?
+- **1c.** Prices: only Mom and Aunt (admins) can change them. Correct?
   > Answer:
 
 ---
 
-## 🔴 2. People and logins: needed this week
+## ✅ 2. People and logins: ANSWERED by Nithyaa (28 Nov)
 
-Each person gets their own login. Nobody shares one.
-
-| Name | What they do | Role in the system (admin / founder / cook / rider) |
+| Person | What they do | Role in the system |
 |---|---|---|
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
+| Mom | Runs everything, management | **admin**: everything |
+| Aunt | Salads, groceries, cooks, manages | **admin**: everything, incl. the food/kitchen page |
+| Hired cook | Only cooks | **cook**: kitchen screen only (orders to cook, mark Preparing / Ready). No money, prices, accounts or customer details |
+| Delivery boy 1 | Deliveries | **rider**: only their own deliveries; customer name, address, phone until delivered |
+| Delivery boy 2 | Deliveries | **rider** (same) |
+| Helper | Helps | **no login** for now (can be added later) |
 
-- **2a.** Mom runs the kitchen day to day. Should she see **money** (sales, totals) or just orders? If not money, we'll add a separate "manager" role.
+- There's no separate "founder" role: Mom and Aunt are the founders and are both admins.
+- More workers may join later. Each gets their own login with the smallest role that fits.
+
+**Still worth confirming with Mom & Aunt:**
+- **2d.** What are everyone's **names** for the logins (e.g. `ravi`, `priya`)? Each person picks their own password the first time.
   > Answer:
-- **2b.** Who should be the **admin**, the person who creates logins and resets passwords? We suggest 1–2 people only.
-  > Answer:
-- **2c.** Should riders see the customer's phone number and address, or only the order and the area?
+- **2e.** If the helper starts packing or handing over orders, should they get the same kitchen screen as the cook?
   > Answer:
 
 ---
 
 ## 🔴 3. How orders flow: needed this week
 
-- **3a.** **Who types the orders into the system?** Mom, a cook, a founder? Is it the same person for Swiggy, Zomato and walk-ins?
+- **3a.** **Who types the orders into the system?** Mom, Aunt, or both? Is it the same for Swiggy, Zomato and walk-ins? (The hired cook can't enter orders: her screen is kitchen only.)
   > Answer:
 - **3b.** When a Swiggy or Zomato rider picks up an order, our system will show it as **"On the way"**. The apps don't tell us when it's delivered. What should happen next?
   - [ ] Someone taps **"Delivered"**
@@ -125,7 +125,7 @@ The system is designed for this from day one, but we can't build it until we und
   > Answer:
 - **7d.** Shared costs (rent, gas, electricity): who pays and how is it split?
   > Answer:
-- **7e.** Who should be allowed to **see** sales and profit numbers?
+- **7e.** Sales and profit numbers: only Mom and Aunt (admins) see them. Correct?
   > Answer:
 
 ---

@@ -74,7 +74,7 @@ def require_roles(*roles: Role) -> Callable[..., User]:
     return checker
 
 
-ANY_STAFF = (Role.ADMIN, Role.FOUNDER, Role.COOK, Role.RIDER)
+ANY_STAFF = (Role.ADMIN, Role.COOK, Role.RIDER)
 
 
 def actor_of(user: User) -> Actor:

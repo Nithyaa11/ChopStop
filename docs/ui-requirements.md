@@ -5,7 +5,7 @@ frontend is built (week 3). Each item notes who asked for it and when.
 
 ---
 
-## Orders page (founder / manager view)
+## Orders page (admin view: Mom, Aunt)
 
 **Layout: one page, live orders on top, finished orders folded away below.**
 
@@ -36,6 +36,15 @@ frontend is built (week 3). Each item notes who asked for it and when.
   time) is on top.
 - "Delayed" is a badge on the order card (with its reason), not its own group,
   because delay is a flag, not a status.
+
+## Who sees which screen (decided 28 Nov 2026)
+
+| Role | People | Screens |
+|---|---|---|
+| admin | Mom, Aunt | Everything: orders page, kitchen/food page, menu & prices, groceries, accounts, money, reports |
+| cook | Hired cook | **Kitchen screen only**: orders to cook (dish, quantity, due time, notes), buttons Preparing / Ready. No prices, totals, customer details, money or accounts |
+| rider | 2 delivery boys | **My deliveries only**: orders assigned to them, with customer name, address and phone **until delivered** (then hidden), buttons Picked up → On the way / Delivered |
+| (none) | Helper | No login for now |
 
 ## Status names on screen
 

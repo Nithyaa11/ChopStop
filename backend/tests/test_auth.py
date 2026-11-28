@@ -211,7 +211,7 @@ def test_role_change_takes_effect_immediately(client: TestClient, db: Session) -
     cook_h = token_for(client, cook)
     r = client.post(
         f"/users/{cook.id}/role",
-        json={"role": "founder", "reason": "new partner"},
+        json={"role": "rider", "reason": "moved to deliveries"},
         headers=admin_h,
     )
     assert r.status_code == 200
@@ -255,7 +255,7 @@ def test_no_token_is_401(client: TestClient) -> None:
     assert client.get("/auth/me").status_code == 401
 
 
-@pytest.mark.parametrize("role", [Role.FOUNDER, Role.COOK, Role.RIDER])
+@pytest.mark.parametrize("role", [Role.COOK, Role.RIDER])
 def test_non_admins_cannot_manage_users(client: TestClient, db: Session, role: Role) -> None:
     headers = token_for(client, make_user(db, role))
     assert client.get("/users", headers=headers).status_code == 403

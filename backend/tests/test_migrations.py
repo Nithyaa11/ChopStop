@@ -30,3 +30,29 @@ def test_models_match_migrations(owner_engine: Engine) -> None:
     with owner_engine.connect() as conn:
         diff = compare_metadata(MigrationContext.configure(conn), Base.metadata)
     assert diff == [], f"Models and migrations are out of sync: {diff}"
+
+
+def test_roles_migration_refuses_while_founders_exist(owner_engine: Engine) -> None:
+    """0006 must not silently promote founders to admin; it stops and asks for a decision."""
+    import pytest
+    from sqlalchemy import text
+
+    from app.core.security import hash_password
+
+    cfg = alembic_config()
+    command.downgrade(cfg, "0005")
+    try:
+        with owner_engine.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO users (username, display_name, role, password_hash) "
+                    "VALUES ('old-founder-x', 'Old', 'founder', :h)"
+                ),
+                {"h": hash_password("kitchen-Rush-42")},
+            )
+        with pytest.raises(Exception, match="founder role"):
+            command.upgrade(cfg, "head")
+    finally:
+        with owner_engine.begin() as conn:
+            conn.execute(text("DELETE FROM users WHERE username = 'old-founder-x'"))
+        command.upgrade(cfg, "head")

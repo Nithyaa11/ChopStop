@@ -98,3 +98,20 @@
   - 🟡 next 2–3 weeks: subscriptions (plans, cutoff, pick link); groceries (amounts, suppliers, buffer); money (commissions, payouts, business vs personal).
   - 🟢 later: running cost, tablet and Wi-Fi, integration quote, customer data.
 - Nithyaa asks the founders tomorrow (29 Nov). The answers shape Day 9's menu and order API.
+
+### Extra — Fri 28 Nov (roles fitted to the real team)
+**Decided with Nithyaa:**
+- Mom = **admin**, Aunt = **admin**: both have everything, incl. the food/kitchen page.
+- Hired cook = **cook**: kitchen screen only.
+- 2 delivery boys = **rider**: own deliveries; customer name, address and phone until delivered.
+- Helper: no login for now.
+
+**Done**
+- Migration `0006`: roles are now `admin`, `cook`, `rider`; **`founder` removed** (Mom and Aunt are the founders and are admins).
+  - 🔒 The migration **refuses to run** if anyone still has the founder role. It never silently promotes people to admin. Tested.
+- Tests updated for 3 roles. New test: the `founder` role is rejected by the app and the DB.
+- README: new **Roles** table; API table now admin / cook / rider.
+- `docs/ui-requirements.md`: "who sees which screen" table (cook: no prices or customer details; rider: contact details hidden after delivery).
+- `docs/founder-questions.md`: section 2 marked answered, with 2 follow-ups (login names; helper later). Questions about prices and profit now say "only Mom & Aunt, correct?".
+
+**Results:** `pytest` ✅ **302 passed** · `ruff` ✅ · `alembic check` ✅ · dev DB at `0006`

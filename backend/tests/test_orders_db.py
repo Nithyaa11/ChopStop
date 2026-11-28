@@ -38,7 +38,7 @@ def ids(conn: Connection) -> dict[str, int]:
     user_id = conn.execute(
         text(
             "INSERT INTO users (username, display_name, role, password_hash) "
-            "VALUES (:u, 'T', 'founder', :h) RETURNING id"
+            "VALUES (:u, 'T', 'admin', :h) RETURNING id"
         ),
         {"u": f"t{uuid.uuid4().hex[:12]}", "h": HASH},
     ).scalar_one()

@@ -18,10 +18,20 @@ from app.core.models import Base, TimestampMixin
 
 
 class Role(enum.StrEnum):
-    ADMIN = "admin"  # manages accounts and settings
-    FOUNDER = "founder"  # runs the business: orders, kitchen, money, reports
-    COOK = "cook"  # kitchen queue only, no money
-    RIDER = "rider"  # own deliveries only, no kitchen, no money
+    """Who can do what (decided 28 Nov 2026 with Nithyaa).
+
+    admin - Mom and Aunt (the founders): everything. Orders, kitchen/food page, menu,
+            groceries, accounts, money, reports.
+    cook  - hired cook: kitchen screen only (orders to cook, mark preparing/ready).
+            No money, no prices, no accounts, no customer contact details.
+    rider - the 2 delivery boys: only deliveries assigned to them. Name, address and
+            phone of those customers until delivered. No kitchen, no money.
+    The helper has no login for now; add a role here (and a migration) if that changes.
+    """
+
+    ADMIN = "admin"
+    COOK = "cook"
+    RIDER = "rider"
 
 
 ROLE_VALUES = tuple(r.value for r in Role)

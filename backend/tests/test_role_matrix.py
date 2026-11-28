@@ -24,8 +24,8 @@ from app.modules.users import service
 from app.modules.users.models import Role
 from tests.test_deny_by_default import _calls, iter_api_routes
 
-A, F, C, R = Role.ADMIN, Role.FOUNDER, Role.COOK, Role.RIDER
-EVERYONE = {A, F, C, R}
+A, C, R = Role.ADMIN, Role.COOK, Role.RIDER
+EVERYONE = {A, C, R}
 
 # ---- THE ROLE MATRIX (single source of truth for permissions) ----
 ACCESS: dict[tuple[str, str], set[Role]] = {
